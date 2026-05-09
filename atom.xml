@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>星轨手札</title>
+  <subtitle>德国留学、日本旅行与技术折腾记录</subtitle>
+  <link href="https://yuulog.org/" rel="alternate" type="text/html"/>
+  <link href="https://yuulog.org/atom.xml" rel="self" type="application/atom+xml"/>
+  <id>https://yuulog.org/</id>
+  <updated>2026-05-09T21:05:29.959Z</updated>
+  <language>zh_CN</language>
+  <entry>
+    <title>从零搭建 VPS 节点</title>
+    <link href="https://yuulog.org/posts/build-vps-node-from-zero/" rel="alternate" type="text/html"/>
+    <id>https://yuulog.org/posts/build-vps-node-from-zero/</id>
+    <published>2026-05-11T00:00:00.000Z</published>
+    <updated>2026-05-11T00:00:00.000Z</updated>
+    <summary>面向新手的 VPS 初始化思路，记录系统更新、安全配置、防火墙和服务部署的基本流程。</summary>
+    <content type="html"><![CDATA[<h1>从零搭建 VPS 节点</h1>
+<p>拿到一台新的 VPS 后，不建议直接部署业务。先做基础初始化，后面维护会轻松很多，也能避免一些低级安全问题。</p>
+<h2>1. 登录并更新系统</h2>
+<p>第一次登录通常使用服务商提供的 root 密码或 SSH Key。</p>
+<pre><code>ssh root@your_server_ip
+apt update
+apt upgrade -y
+</code></pre>
+<p>如果是 Debian 或 Ubuntu，先把系统包更新到最新，再继续配置用户和防火墙。</p>
+<h2>2. 创建普通用户</h2>
+<p>日常运维尽量不要一直使用 root。</p>
+<pre><code>adduser mizuki
+usermod -aG sudo mizuki
+</code></pre>
+<p>之后可以把本机公钥放到新用户的 <code>~/.ssh/authorized_keys</code> 里，并测试能否正常登录。</p>
+<h2>3. 配置 SSH</h2>
+<p>确认普通用户可登录后，再考虑关闭密码登录和 root 远程登录。</p>
+<pre><code>nano /etc/ssh/sshd_config
+</code></pre>
+<p>常见配置项：</p>
+<pre><code>PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+</code></pre>
+<p>修改后重启 SSH 服务：</p>
+<pre><code>systemctl restart ssh
+</code></pre>
+<p>重启前最好保留一个已登录窗口，避免配置错误后把自己锁在服务器外。</p>
+<h2>4. 开启防火墙</h2>
+<p>只放行必要端口。</p>
+<pre><code>ufw allow OpenSSH
+ufw allow 80
+ufw allow 443
+ufw enable
+ufw status
+</code></pre>
+<p>如果你改了 SSH 端口，记得先放行新端口再启用防火墙。</p>
+<h2>5. 部署服务前的检查清单</h2>
+<ul>
+<li>域名 DNS 是否已经解析到 VPS。</li>
+<li>服务器时间和时区是否正确。</li>
+<li>是否需要 Docker 或反向代理。</li>
+<li>日志、备份和自动续期证书是否安排好。</li>
+</ul>
+<h2>小结</h2>
+<p>VPS 折腾的重点不是一次性跑起来，而是让它稳定、可恢复、可迁移。先把初始化流程写成笔记，之后每换一台机器都能少踩很多坑。</p>
+]]></content>
+    <author>
+      <name>星轨手札</name>
+    </author>
+    <category term="技术笔记"></category>
+  </entry>
+  <entry>
+    <title>大阪到东京的日本巡礼路线</title>
+    <link href="https://yuulog.org/posts/osaka-to-tokyo-anime-pilgrimage/" rel="alternate" type="text/html"/>
+    <id>https://yuulog.org/posts/osaka-to-tokyo-anime-pilgrimage/</id>
+    <published>2026-05-10T00:00:00.000Z</published>
+    <updated>2026-05-10T00:00:00.000Z</updated>
+    <summary>一条适合初次规划的关西到关东动漫巡礼路线，把城市交通、作品场景和旅行节奏串起来。</summary>
+    <content type="html"><![CDATA[<h1>大阪到东京的日本巡礼路线</h1>
+<p>从大阪一路走到东京，是很适合第一次做动漫巡礼的路线。关西有热闹的街区和古都气息，关东则有密集的车站、校园、坡道和海边场景。</p>
+<h2>Day 1-2：大阪，先把旅行节奏调起来</h2>
+<p>大阪适合作为起点。抵达后可以先住在难波、梅田或天王寺附近，交通方便，晚上也有很多地方可以逛。</p>
+<p>可以安排：</p>
+<ul>
+<li>道顿堀和心斋桥：适合第一晚散步和吃饭。</li>
+<li>日本桥：电子产品、模型、周边店密集，动漫氛围很足。</li>
+<li>通天阁、新世界：街景有很强的昭和感，适合拍照。</li>
+</ul>
+<h2>Day 3：京都或奈良，加入古都支线</h2>
+<p>从大阪去京都或奈良都很方便。京都适合神社、街巷和校园氛围的巡礼；奈良节奏更慢，适合把行程留白。</p>
+<p>如果目标是作品场景，建议提前把截图、车站名、步行路线存在离线地图里。巡礼当天不要排太满，因为找角度和等人流散开会花时间。</p>
+<h2>Day 4：新干线前往东京</h2>
+<p>从新大阪到东京可以坐东海道新干线。天气好时，靠窗座位有机会看到富士山。抵达东京后建议把住宿定在山手线沿线或地铁换乘方便的位置。</p>
+<h2>Day 5-6：东京核心巡礼</h2>
+<p>东京的巡礼点分布很散，最好按区域拆：</p>
+<ul>
+<li>秋叶原：电器街、周边店、街景摄影。</li>
+<li>新宿、涩谷、池袋：城市夜景和作品常见舞台。</li>
+<li>御茶水、神田、四谷：坡道、桥梁、学校周边氛围。</li>
+<li>镰仓、江之岛：如果时间足够，非常适合安排一日海边巡礼。</li>
+</ul>
+<h2>路线规划建议</h2>
+<p>巡礼不是打卡越多越好。我的习惯是每天只安排 2-3 个核心点，剩下时间留给路上的偶遇：便利店的新口味、车站里的海报、傍晚突然变漂亮的天空。</p>
+<p>如果第一次从大阪走到东京，重点不是把地图点亮，而是找到自己喜欢的旅行节奏。</p>
+]]></content>
+    <author>
+      <name>星轨手札</name>
+    </author>
+    <category term="旅行记录"></category>
+  </entry>
+  <entry>
+    <title>德国留学日常</title>
+    <link href="https://yuulog.org/posts/germany-student-daily/" rel="alternate" type="text/html"/>
+    <id>https://yuulog.org/posts/germany-student-daily/</id>
+    <published>2026-05-09T00:00:00.000Z</published>
+    <updated>2026-05-09T00:00:00.000Z</updated>
+    <summary>从早八课堂到超市采购，记录德国留学生活里真实又琐碎的一天。</summary>
+    <content type="html"><![CDATA[<h1>德国留学日常</h1>
+<p>德国留学最真实的样子，往往不是朋友圈里那张滤镜很重的街景，而是早晨赶车、课间买咖啡、晚上对着德语邮件反复确认附件有没有传对。</p>
+<h2>上午：从电车开始的一天</h2>
+<p>如果当天有早课，我会提前看好 DB 或本地交通 App。德国公共交通整体方便，但临时延误也很常见，所以出门前多留十分钟会安心很多。</p>
+<p>到学校后，第一件事通常是找一个能充电的位置。课堂节奏比想象中更强调主动提问和课前阅读，老师不会把所有知识点都拆到很细，很多理解要靠自己课后补。</p>
+<h2>中午：食堂和超市</h2>
+<p>学生食堂是控制预算的好地方。想换口味时，我会去亚超补一点调料，简单做米饭、咖喱、拉面或者炒菜。真正开始留学后才发现，会做几道稳定的家常菜是一种很强的生活技能。</p>
+<h2>下午：学习、手续和邮件</h2>
+<p>德国生活里有很多“纸面流程”：住房合同、保险、银行、居留、广播电视费。每一项看起来都不复杂，但如果德语邮件读得慢，就会很消耗精力。</p>
+<p>我的经验是：</p>
+<ul>
+<li>重要文件按主题建文件夹保存。</li>
+<li>每次办手续都记录日期、联系人和下一步。</li>
+<li>不确定的地方尽早发邮件确认。</li>
+</ul>
+<h2>晚上：给自己一点缓冲</h2>
+<p>晚上会留一点时间看番、整理照片，或者写博客。海外生活不总是浪漫的，但把每天的小事写下来，会让许多当下觉得麻烦的瞬间，变成以后能回头看的轨迹。</p>
+]]></content>
+    <author>
+      <name>星轨手札</name>
+    </author>
+    <category term="德国留学"></category>
+  </entry>
+</feed>
