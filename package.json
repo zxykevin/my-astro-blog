@@ -1,5 +1,6 @@
 {
-	"name": "mizuki",
+	"name": "my-astro-blog",
+	"private": true,
 	"type": "module",
 	"version": "9.0",
 	"scripts": {
