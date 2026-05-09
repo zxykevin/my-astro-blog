@@ -10,7 +10,7 @@ export const LOCAL_PLAYLIST: Song[] = [
 		title: "エガクミライ",
 		artist: "MyGO!!!!!",
 		cover: "assets/music/cover/cl.webp",
-		url: "assets/music/url/mygo-egaku-mirai.flac",
+		url: "assets/music/url/mygo-egaku-mirai.mp3",
 		duration: 0,
 	},
 ];
