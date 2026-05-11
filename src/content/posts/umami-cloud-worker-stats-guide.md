@@ -13,6 +13,71 @@ draft: false
 
 这篇文章记录完整接入过程。文中的域名、网站 ID 和密钥都使用占位符，照着做时请替换成自己的配置。
 
+## 先在 Umami Cloud 里准备网站和 API Key
+
+开始写代码之前，先把 Umami Cloud 后台里的几件事做完。这里不需要把任何密钥写进博客仓库，只要拿到后面配置 Worker 会用到的三个值：
+
+```text
+UMAMI_API_URL=https://api.umami.is
+UMAMI_WEBSITE_ID=<YOUR_WEBSITE_ID>
+UMAMI_API_KEY=<YOUR_UMAMI_API_KEY>
+```
+
+### 1. 添加网站
+
+登录 Umami Cloud 后，进入 Websites 页面，点击添加网站。通常需要填写：
+
+- 网站名称：方便自己识别即可，比如 `My Blog`
+- 网站域名：填写正式访问域名，比如 `example.com`
+- 时区：按自己主要统计口径选择
+
+保存后，Umami 会创建一个网站条目。这个条目对应后面统计脚本里的 `data-website-id`。
+
+### 2. 获取 Website ID
+
+进入刚刚创建的网站详情页，找到网站设置或脚本安装区域。Umami 会给出类似这样的安装脚本：
+
+```html
+<script
+	defer
+	src="https://cloud.umami.is/script.js"
+	data-website-id="<YOUR_WEBSITE_ID>"
+></script>
+```
+
+其中 `<YOUR_WEBSITE_ID>` 就是网站 ID。它不是 API Key，但教程和截图里仍建议打码，避免把自己的站点配置原样暴露出来。
+
+### 3. 生成 API Key
+
+在 Umami Cloud 的账户设置里找到 API Keys，创建一个新的 API Key。建议命名成容易识别的用途，例如：
+
+```text
+blog-stats-worker
+```
+
+生成后只复制一次，立刻保存到 Cloudflare Worker Secret：
+
+```text
+UMAMI_API_KEY=<YOUR_UMAMI_API_KEY>
+```
+
+不要把这个值写进 Astro 代码、Markdown 文章、GitHub 仓库或浏览器端脚本。后续所有读取统计的请求都应由 Worker 代发。
+
+### 4. 在 Worker 里配置变量
+
+Cloudflare Worker 里分别配置：
+
+```text
+Variables:
+UMAMI_API_URL=https://api.umami.is
+UMAMI_WEBSITE_ID=<YOUR_WEBSITE_ID>
+
+Secrets:
+UMAMI_API_KEY=<YOUR_UMAMI_API_KEY>
+```
+
+`UMAMI_API_URL` 用 API 域名，`UMAMI_WEBSITE_ID` 用网站 ID，`UMAMI_API_KEY` 放 Secret。这样前端请求 Worker 时，只能拿到裁剪后的统计结果，拿不到真正的 API Key。
+
 ## 为什么要加 Worker 代理
 
 Umami 的统计脚本本身可以直接放在网页里：
