@@ -1,0 +1,93 @@
+---
+import { getFriendsList } from "../../../data/friends";
+import WidgetLayout from "../common/WidgetLayout.astro";
+
+const friends = getFriendsList();
+
+interface Props {
+	class?: string;
+	style?: string;
+}
+
+const className = Astro.props.class;
+const style = Astro.props.style;
+---
+
+<WidgetLayout
+	name="友情链接"
+	id="friend-links"
+	isCollapsed={false}
+	class={className}
+	style={style}
+>
+	<div class="friend-links-list">
+		{
+			friends.map((friend) => (
+				<a
+					class="friend-link text-neutral-700 dark:text-neutral-300"
+					href={friend.siteurl}
+					target="_blank"
+					rel="noopener noreferrer"
+					aria-label={`访问 ${friend.title}`}
+				>
+					<span class="friend-link-title">{friend.title}</span>
+					<span class="friend-link-badge">{friend.tags[0] ?? "Link"}</span>
+				</a>
+			))
+		}
+	</div>
+</WidgetLayout>
+
+<style>
+	.friend-links-list {
+		display: grid;
+		gap: 0.25rem;
+	}
+
+	.friend-link {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		min-height: 2.5rem;
+		padding: 0 0.5rem;
+		border-radius: 0.5rem;
+		transition:
+			color 0.2s ease,
+			background-color 0.2s ease,
+			padding-left 0.2s ease;
+	}
+
+	.friend-link:hover {
+		padding-left: 0.75rem;
+		color: var(--primary);
+		background: var(--btn-plain-bg-hover);
+	}
+
+	.friend-link-title {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.friend-link-badge {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 2rem;
+		height: 1.75rem;
+		margin-left: 1rem;
+		padding: 0 0.5rem;
+		border-radius: 0.5rem;
+		background: oklch(0.95 0.025 var(--hue));
+		color: var(--btn-content);
+		font-size: 0.875rem;
+		font-weight: 700;
+		white-space: nowrap;
+	}
+
+	:global(.dark) .friend-link-badge {
+		background: var(--primary);
+		color: var(--deep-text);
+	}
+</style>

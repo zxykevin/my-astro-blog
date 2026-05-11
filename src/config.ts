@@ -27,7 +27,7 @@ export const siteConfig: SiteConfig = {
 	title: "星轨手札",
 	subtitle: "德国留学、日本旅行与技术折腾记录",
 	siteURL: "https://yuulog.org/", // 请替换为你的站点URL，以斜杠结尾
-	siteStartDate: "2025-01-01", // 站点开始运行日期，用于站点统计组件计算运行天数
+	siteStartDate: "2026-05-09", // 站点开始运行日期，用于站点统计组件计算运行天数
 
 	timeZone: SITE_TIMEZONE,
 
@@ -293,7 +293,7 @@ export const navBarConfig: NavBarConfig = {
 };
 
 export const profileConfig: ProfileConfig = {
-	avatar: "assets/images/avatar.webp", // 相对于 /src 目录。如果以 '/' 开头，则相对于 /public 目录
+	avatar: "assets/images/avatar.jpg", // 相对于 /src 目录。如果以 '/' 开头，则相对于 /public 目录
 	name: "星轨手札",
 	bio: "德国留学生 / 日本旅行爱好者 / 技术折腾记录者",
 	typewriter: {

@@ -7,6 +7,7 @@ import FullscreenWallpaper from "@components/misc/FullscreenWallpaper.astro";
 import IconifyLoader from "@components/misc/IconifyLoader.astro";
 import Footer from "@components/organisms/footer/Footer.astro";
 import Navbar from "@components/organisms/navigation/Navbar.astro";
+import FriendLinks from "@components/widgets/friend-links/FriendLinks.astro";
 import SideBar from "@components/widgets/sidebar/SideBar.astro";
 import type { MarkdownHeading } from "astro";
 import { Icon } from "astro-icon/components";
@@ -223,6 +224,7 @@ const defaultPostListLayout = siteConfig.postListLayout?.defaultMode || "list";
 						<div
 							class="footer col-span-full onload-animation hidden lg:block"
 						>
+							<FriendLinks class="mb-8" />
 							<Footer />
 						</div>
 					</div>
@@ -231,6 +233,7 @@ const defaultPostListLayout = siteConfig.postListLayout?.defaultMode || "list";
 				<div
 					class="footer col-span-full onload-animation block lg:hidden"
 				>
+					<FriendLinks class="mb-8" />
 					<Footer />
 				</div>
 			</div>
