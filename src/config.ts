@@ -541,6 +541,7 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 			"profile",
 			"announcement",
 			"music-sidebar",
+			"site-stats",
 			"categories",
 			"tags",
 			"friend-links",

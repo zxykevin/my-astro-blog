@@ -9,6 +9,7 @@ import {
 	getSortedPosts,
 	getTagList,
 } from "../../../utils/content-utils";
+import UmamiStats from "../../common/UmamiStats.astro";
 import WidgetLayout from "../common/WidgetLayout.astro";
 
 interface Props {
@@ -96,6 +97,13 @@ const stats = [
 		formatted: true,
 	},
 	{
+		icon: "material-symbols:visibility-outline-rounded",
+		label: i18n(I18nKey.siteStatsVisitors),
+		value: "--",
+		dynamic: true,
+		id: "historical-visitors",
+	},
+	{
 		icon: "material-symbols:calendar-clock-outline",
 		label: i18n(I18nKey.siteStatsRunningDays),
 		value: 0, // 将由客户端更新
@@ -137,9 +145,18 @@ const stats = [
 							class="text-base font-bold text-neutral-900 dark:text-neutral-100"
 							data-stat-id={stat.id}
 						>
-							{stat.formatted
-								? formatNumber(stat.value)
-								: stat.value}
+							{stat.id === "historical-visitors" ? (
+								<UmamiStats
+									metric="visitors"
+									unavailableText={i18n(
+										I18nKey.profileStatsUnavailable,
+									)}
+								/>
+							) : stat.formatted ? (
+								formatNumber(stat.value)
+							) : (
+								stat.value
+							)}
 						</span>
 						{stat.suffix && (
 							<span class="text-sm text-neutral-500 dark:text-neutral-400 ml-1">
@@ -153,7 +170,13 @@ const stats = [
 	</div>
 </WidgetLayout>
 
-<script is:inline define:vars={{ siteStartDate, lastPostDate }}>
+<script
+	is:inline
+	define:vars={{
+		siteStartDate,
+		lastPostDate,
+	}}
+>
 	function updateDynamicStats() {
 		const today = new Date();
 
@@ -196,5 +219,7 @@ const stats = [
 	updateDynamicStats();
 
 	// 每小时更新一次（可选，因为天数变化较慢）
+	setInterval(updateDynamicStats, 60 * 60 * 1000);
+	updateDynamicStats();
 	setInterval(updateDynamicStats, 60 * 60 * 1000);
 </script>

@@ -1,0 +1,97 @@
+---
+interface Props {
+	metric: "views" | "visitors";
+	loadingText?: string;
+	unavailableText?: string;
+	hideWhenUnavailable?: boolean;
+}
+
+const {
+	metric,
+	loadingText = "--",
+	unavailableText = "--",
+	hideWhenUnavailable = false,
+} = Astro.props;
+
+const statsProxyUrl = "https://yuulog-umami.2596864417.workers.dev/";
+---
+
+<span
+	data-umami-stat
+	data-metric={metric}
+	data-unavailable-text={unavailableText}
+	data-hide-when-unavailable={hideWhenUnavailable ? "true" : "false"}
+>
+	{loadingText}
+</span>
+
+<script is:inline define:vars={{ statsProxyUrl }}>
+	(() => {
+		function formatStatNumber(value) {
+			return new Intl.NumberFormat().format(value);
+		}
+
+		function getStatsElements() {
+			return Array.from(document.querySelectorAll("[data-umami-stat]"));
+		}
+
+		function setUnavailable(element) {
+			const wrapper = element.closest("[data-umami-stat-wrapper]");
+			if (element.dataset.hideWhenUnavailable === "true") {
+				wrapper?.classList.add("hidden");
+				return;
+			}
+			element.textContent = element.dataset.unavailableText || "--";
+		}
+
+		async function updateStatsElement(element) {
+			const metric = element.dataset.metric;
+			const path = window.location.pathname || "/";
+
+			try {
+				const url = new URL(statsProxyUrl);
+				url.searchParams.set("path", path);
+
+				const response = await fetch(url, {
+					headers: { Accept: "application/json" },
+				});
+				if (!response.ok) {
+					throw new Error(`Stats request failed: ${response.status}`);
+				}
+
+				const data = await response.json();
+				const value = Number(data?.[metric]);
+				if (!data?.ok || !Number.isFinite(value)) {
+					throw new Error("Stats response is unavailable");
+				}
+
+				element.textContent = formatStatNumber(value);
+				element
+					.closest("[data-umami-stat-wrapper]")
+					?.classList.remove("hidden");
+			} catch (error) {
+				console.warn(error);
+				setUnavailable(element);
+			}
+		}
+
+		function refreshUmamiStats() {
+			getStatsElements().forEach(updateStatsElement);
+		}
+
+		window.refreshUmamiStats = refreshUmamiStats;
+
+		if (!window.__umamiStatsListenersAttached) {
+			window.__umamiStatsListenersAttached = true;
+			if (document.readyState === "loading") {
+				document.addEventListener(
+					"DOMContentLoaded",
+					refreshUmamiStats,
+				);
+			}
+			document.addEventListener("swup:page:view", refreshUmamiStats);
+		}
+
+		refreshUmamiStats();
+	})();
+</script>
