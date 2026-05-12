@@ -1,8 +1,5 @@
 ---
-import FloatingControls from "@components/control/FloatingControls.astro";
-import Navbar from "@components/organisms/navigation/Navbar.astro";
-import Footer from "@components/organisms/footer/Footer.astro";
-import Layout from "@layouts/Layout.astro";
+import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { Icon } from "astro-icon/components";
 
 import { siteConfig } from "../config";
@@ -30,43 +27,42 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 }));
 ---
 
-<Layout title="友情链接" description="遇见有趣的灵魂与散落在互联网角落的星光。">
-	<div class="friends-page min-h-screen overflow-hidden text-white">
-		<div class="friends-bg" aria-hidden="true">
-			{
-				backgroundImages.map((image, index) => (
-					<img
-						class:list={[
-							"friends-bg-image",
-							{ active: index === 0 },
-						]}
-						src={image}
-						alt=""
-						loading={index === 0 ? "eager" : "lazy"}
-						decoding="async"
-					/>
-				))
-			}
-		</div>
-		<div class="friends-aurora" aria-hidden="true"></div>
-		<div class="friends-particles" aria-hidden="true">
-			{
-				particles.map((particle) => (
-					<i
-						style={`--left:${particle.left};--top:${particle.top};--size:${particle.size};--duration:${particle.duration};--delay:${particle.delay}`}
-					/>
-				))
-			}
+<MainGridLayout
+	title="友情链接"
+	description="遇见有趣的灵魂与散落在互联网角落的星光。"
+>
+	<div class="friends-page">
+		<div class="friends-scene" aria-hidden="true">
+			<div class="friends-bg">
+				{
+					backgroundImages.map((image, index) => (
+						<img
+							class:list={[
+								"friends-bg-image",
+								{ active: index === 0 },
+							]}
+							src={image}
+							alt=""
+							loading={index === 0 ? "eager" : "lazy"}
+							decoding="async"
+						/>
+					))
+				}
+			</div>
+			<div class="friends-aurora"></div>
+			<div class="friends-particles">
+				{
+					particles.map((particle) => (
+						<i
+							style={`--left:${particle.left};--top:${particle.top};--size:${particle.size};--duration:${particle.duration};--delay:${particle.delay}`}
+						/>
+					))
+				}
+			</div>
 		</div>
 
-		<header class="friends-nav relative z-30">
-			<Navbar class="friends-navbar" />
-		</header>
-
-		<main
-			class="friends-main relative z-20 mx-auto w-full max-w-7xl px-4 pb-20 pt-10 sm:px-6 lg:px-8"
-		>
-			<section class="friends-hero mx-auto max-w-3xl text-center">
+		<div class="friends-content">
+			<section class="friends-hero">
 				<p class="friends-kicker">Friends / Link Exchange</p>
 				<h1>友情链接</h1>
 				<p class="friends-subtitle">
@@ -74,10 +70,7 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 				</p>
 			</section>
 
-			<section
-				class="friends-grid mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-				aria-label="友情链接列表"
-			>
+			<section class="friends-grid" aria-label="友情链接列表">
 				{
 					friends.map((friend) => {
 						const hostname = new URL(friend.url).hostname;
@@ -87,7 +80,7 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 
 						return (
 							<a
-								class="friend-card group"
+								class="friend-card"
 								href={friend.url}
 								target="_blank"
 								rel="noopener noreferrer"
@@ -117,8 +110,8 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 										/>
 									</div>
 
-									<div class="min-w-0 flex-1">
-										<div class="flex items-start justify-between gap-3">
+									<div class="friend-info">
+										<div class="friend-heading">
 											<h2>{friend.name}</h2>
 											<Icon
 												name="material-symbols:arrow-outward-rounded"
@@ -138,33 +131,39 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 					})
 				}
 			</section>
-		</main>
-
-		<div
-			class="friends-footer relative z-20 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
-		>
-			<Footer />
 		</div>
-
-		<FloatingControls headings={[]} />
 	</div>
-</Layout>
+</MainGridLayout>
 
 <style>
-	:global(html.dark) .friends-page,
-	.friends-page {
-		background: #060712;
-	}
-
 	.friends-page {
 		position: relative;
 		isolation: isolate;
+		min-height: calc(100vh - 8rem);
+		overflow: hidden;
+		border-radius: var(--radius-large);
+		background: #060712;
+		color: white;
+		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+	}
+
+	.friends-scene {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.friends-bg,
+	.friends-aurora,
+	.friends-particles {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
 	}
 
 	.friends-bg {
-		position: fixed;
-		inset: 0;
-		z-index: 0;
 		background: #060712;
 	}
 
@@ -207,10 +206,7 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 	}
 
 	.friends-aurora {
-		position: fixed;
-		inset: 0;
 		z-index: 1;
-		pointer-events: none;
 		background:
 			linear-gradient(
 				115deg,
@@ -229,11 +225,8 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 	}
 
 	.friends-particles {
-		position: fixed;
-		inset: 0;
 		z-index: 2;
 		overflow: hidden;
-		pointer-events: none;
 	}
 
 	.friends-particles i {
@@ -249,22 +242,18 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 		animation-delay: var(--delay);
 	}
 
-	.friends-nav {
-		position: sticky;
-		top: 0;
-	}
-
-	:global(.friends-navbar) {
-		color: white;
-	}
-
-	.friends-main {
-		min-height: calc(100vh - 9rem);
+	.friends-content {
+		position: relative;
+		z-index: 3;
+		padding: clamp(2.75rem, 7vw, 6.5rem) clamp(1rem, 4vw, 2.25rem)
+			clamp(3rem, 7vw, 5.5rem);
 		animation: pageEnter 700ms ease-out both;
 	}
 
 	.friends-hero {
-		padding-top: clamp(2rem, 7vw, 6rem);
+		max-width: 46rem;
+		margin: 0 auto;
+		text-align: center;
 		text-shadow: 0 0 24px rgba(130, 168, 255, 0.42);
 	}
 
@@ -294,17 +283,25 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 	}
 
 	.friends-subtitle {
-		margin: 1.2rem auto 0;
 		max-width: 42rem;
+		margin: 1.2rem auto 0;
 		color: rgba(235, 245, 255, 0.78);
 		font-size: clamp(1rem, 2.8vw, 1.22rem);
 		line-height: 1.8;
+	}
+
+	.friends-grid {
+		display: grid;
+		grid-template-columns: repeat(1, minmax(0, 1fr));
+		gap: 1.5rem;
+		margin-top: clamp(2.5rem, 5vw, 4rem);
 	}
 
 	.friend-card {
 		position: relative;
 		min-height: 11.5rem;
 		cursor: pointer;
+		overflow: hidden;
 		border: 1px solid rgba(198, 225, 255, 0.18);
 		border-radius: 1.25rem;
 		background:
@@ -319,7 +316,6 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 			inset 0 1px 0 rgba(255, 255, 255, 0.16);
 		backdrop-filter: blur(22px) saturate(1.35);
 		-webkit-backdrop-filter: blur(22px) saturate(1.35);
-		overflow: hidden;
 		transform: translate3d(var(--float-x, 0), var(--float-y, 0), 0);
 		transition:
 			transform 220ms ease,
@@ -415,6 +411,18 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 		background: #ffd36d;
 	}
 
+	.friend-info {
+		min-width: 0;
+		flex: 1;
+	}
+
+	.friend-heading {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
 	.friend-card h2 {
 		color: rgba(255, 255, 255, 0.94);
 		font-size: 1.05rem;
@@ -424,8 +432,8 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 	}
 
 	.friend-link-icon {
-		margin-top: 0.1rem;
 		flex: 0 0 auto;
+		margin-top: 0.1rem;
 		color: rgba(196, 231, 255, 0.58);
 		font-size: 1.25rem;
 		transition:
@@ -439,8 +447,8 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 	}
 
 	.friend-desc {
-		margin-top: 0.65rem;
 		min-height: 2.9rem;
+		margin-top: 0.65rem;
 		color: rgba(232, 244, 255, 0.7);
 		font-size: 0.94rem;
 		line-height: 1.65;
@@ -448,8 +456,8 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 
 	.friend-host {
 		display: inline-flex;
-		margin-top: 1rem;
 		max-width: 100%;
+		margin-top: 1rem;
 		overflow: hidden;
 		color: rgba(188, 229, 255, 0.64);
 		font-size: 0.78rem;
@@ -457,8 +465,57 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 		white-space: nowrap;
 	}
 
-	.friends-footer {
-		color: rgba(255, 255, 255, 0.72);
+	@media (min-width: 640px) {
+		.friends-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 1280px) {
+		.friends-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 1536px) {
+		.friends-grid {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 640px) {
+		.friends-page {
+			border-radius: 1rem;
+		}
+
+		.friend-card {
+			min-height: 10.5rem;
+			border-radius: 1rem;
+		}
+
+		.friend-card-inner {
+			padding: 1rem;
+		}
+
+		.friend-avatar-wrap {
+			width: 4rem;
+			height: 4rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.friends-content,
+		.friends-aurora,
+		.friends-particles i,
+		.friends-bg-image {
+			animation: none;
+			transition: none;
+		}
+
+		.friend-card,
+		.friend-card:hover {
+			transform: none;
+		}
 	}
 
 	@keyframes pageEnter {
@@ -497,51 +554,22 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 			opacity: 0;
 		}
 	}
-
-	@media (max-width: 640px) {
-		.friend-card {
-			min-height: 10.5rem;
-			border-radius: 1rem;
-		}
-
-		.friend-card-inner {
-			padding: 1rem;
-		}
-
-		.friend-avatar-wrap {
-			width: 4rem;
-			height: 4rem;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.friends-main,
-		.friends-aurora,
-		.friends-particles i,
-		.friends-bg-image {
-			animation: none;
-			transition: none;
-		}
-
-		.friend-card,
-		.friend-card:hover {
-			transform: none;
-		}
-	}
 </style>
 
 <script>
 	const initFriendsPage = () => {
 		const root = document.querySelector<HTMLElement>(".friends-page");
-		if (!root) {
+		if (!root || root.dataset.friendsReady === "true") {
 			return;
 		}
+
+		root.dataset.friendsReady = "true";
 
 		const motionQuery = window.matchMedia(
 			"(prefers-reduced-motion: reduce)",
 		);
 		const slides = Array.from(
-			document.querySelectorAll<HTMLImageElement>(".friends-bg-image"),
+			root.querySelectorAll<HTMLImageElement>(".friends-bg-image"),
 		);
 		let activeIndex = slides.findIndex((slide) =>
 			slide.classList.contains("active"),
@@ -554,6 +582,10 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 
 		if (!motionQuery.matches && slides.length > 1) {
 			window.setInterval(() => {
+				if (!root.isConnected) {
+					return;
+				}
+
 				slides[activeIndex]?.classList.remove("active");
 				activeIndex = (activeIndex + 1) % slides.length;
 				slides[activeIndex]?.classList.add("active");
@@ -561,13 +593,14 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 		}
 
 		const cards = Array.from(
-			document.querySelectorAll<HTMLAnchorElement>(".friend-card"),
+			root.querySelectorAll<HTMLAnchorElement>(".friend-card"),
 		);
 		const updateCard = (event: PointerEvent) => {
 			const card = event.currentTarget;
 			if (!(card instanceof HTMLAnchorElement)) {
 				return;
 			}
+
 			const rect = card.getBoundingClientRect();
 			const x = event.clientX - rect.left;
 			const y = event.clientY - rect.top;
@@ -594,32 +627,6 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 				card.style.setProperty("--mx", "50%");
 				card.style.setProperty("--my", "50%");
 			});
-		});
-
-		let ticking = false;
-		const handleParallax = (event: PointerEvent) => {
-			if (motionQuery.matches || ticking) {
-				return;
-			}
-
-			ticking = true;
-			window.requestAnimationFrame(() => {
-				const x = (event.clientX / window.innerWidth - 0.5) * 14;
-				const y = (event.clientY / window.innerHeight - 0.5) * 14;
-				root.style.setProperty("--parallax-x", `${x}px`);
-				root.style.setProperty("--parallax-y", `${y}px`);
-				document
-					.querySelector(".friends-aurora")
-					?.setAttribute(
-						"style",
-						`transform: translate3d(${x * -0.25}px, ${y * -0.25}px, 0);`,
-					);
-				ticking = false;
-			});
-		};
-
-		window.addEventListener("pointermove", handleParallax, {
-			passive: true,
 		});
 	};
 

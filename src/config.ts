@@ -289,6 +289,11 @@ export const navBarConfig: NavBarConfig = {
 			url: "/about/",
 			icon: "material-symbols:person",
 		},
+		{
+			name: "友情链接",
+			url: "/friends/",
+			icon: "material-symbols:diversity-1",
+		},
 	],
 };
 
@@ -390,7 +395,8 @@ export const shareConfig: ShareConfig = {
 
 export const announcementConfig: AnnouncementConfig = {
 	title: "", // 公告标题，填空使用i18n字符串Key.announcement
-	content: "欢迎来到星轨手札：这里记录德国留学、日本旅行、动漫巡礼和技术折腾。", // 公告内容
+	content:
+		"欢迎来到星轨手札：这里记录德国留学、日本旅行、动漫巡礼和技术折腾。", // 公告内容
 	closable: true, // 允许用户关闭公告
 	link: {
 		enable: true, // 启用链接
