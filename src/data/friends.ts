@@ -1,5 +1,20 @@
-// 友情链接数据配置
-// 用于管理友情链接页面的数据
+export interface Friend {
+	name: string;
+	avatar: string;
+	description: string;
+	url: string;
+	status?: string;
+}
+
+export const friends: Friend[] = [
+	{
+		name: "XingHuiSamaの宝藏之地",
+		avatar: "https://bu.dusays.com/2026/03/24/69c1e38ac1846.jpg",
+		description: "今天我也要学习吗",
+		url: "https://www.xinghuisama.top",
+		status: "online",
+	},
+];
 
 export interface FriendItem {
 	id: number;
@@ -10,26 +25,19 @@ export interface FriendItem {
 	tags: string[];
 }
 
-// 友情链接数据
-export const friendsData: FriendItem[] = [
-	{
-		id: 1,
-		title: "XingHuiSama",
-		imgurl: "",
-		desc: "XingHuiSama 的博客",
-		siteurl: "https://www.xinghuisama.top/",
-		tags: ["博客"],
-	},
-];
-
-// 获取所有友情链接数据
 export function getFriendsList(): FriendItem[] {
-	return friendsData;
+	return friends.map((friend, index) => ({
+		id: index + 1,
+		title: friend.name,
+		imgurl: friend.avatar,
+		desc: friend.description,
+		siteurl: friend.url,
+		tags: [friend.status ?? "friend"],
+	}));
 }
 
-// 获取随机排序的友情链接数据
 export function getShuffledFriendsList(): FriendItem[] {
-	const shuffled = [...friendsData];
+	const shuffled = [...getFriendsList()];
 	for (let i = shuffled.length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1));
 		[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];

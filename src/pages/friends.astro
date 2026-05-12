@@ -1,14 +1,12 @@
 ---
-import FriendCard from "@components/features/friends/FriendCard.astro";
-import { PageHeader } from "@components/features/page-header";
-import Markdown from "@components/misc/Markdown.astro";
-import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getEntry, render } from "astro:content";
+import FloatingControls from "@components/control/FloatingControls.astro";
+import Navbar from "@components/organisms/navigation/Navbar.astro";
+import Footer from "@components/organisms/footer/Footer.astro";
+import Layout from "@layouts/Layout.astro";
+import { Icon } from "astro-icon/components";
 
 import { siteConfig } from "../config";
-import { getShuffledFriendsList } from "../data/friends";
-import I18nKey from "../i18n/i18nKey";
-import { i18n } from "../i18n/translation";
+import { friends } from "../data/friends";
 
 export const prerender = true;
 
@@ -16,169 +14,622 @@ if (!siteConfig.featurePages.friends) {
 	return Astro.redirect("/404/");
 }
 
-const friendsPost = await getEntry("spec", "friends");
+const backgroundImages = [
+	"/assets/desktop-banner/1.webp",
+	"/assets/desktop-banner/2.webp",
+	"/assets/desktop-banner/3.webp",
+	"/assets/desktop-banner/4.webp",
+];
 
-if (!friendsPost) {
-	throw new Error("friends page content not found");
-}
-
-const { Content } = await render(friendsPost);
-const friendsList = getShuffledFriendsList();
-const allTags = Array.from(new Set(friendsList.flatMap((item) => item.tags)));
+const particles = Array.from({ length: 22 }, (_, index) => ({
+	left: `${(index * 37) % 100}%`,
+	top: `${(index * 61) % 100}%`,
+	size: `${2 + (index % 3)}px`,
+	duration: `${13 + (index % 6) * 2}s`,
+	delay: `${index * -0.7}s`,
+}));
 ---
 
-<MainGridLayout
-	title={i18n(I18nKey.friends)}
-	description={i18n(I18nKey.friends)}
->
-	<script is:inline>
-		window.isFriendsPage = true;
-	</script>
-	<script>
-		import("../scripts/right-sidebar-layout.js");
-	</script>
-
-	<div
-		class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative min-h-32"
-	>
-		<div class="card-base z-10 px-9 py-6 relative w-full">
-			<PageHeader
-				title={i18n(I18nKey.friends)}
-				subtitle={i18n(I18nKey.friendsSubtitle)}
-			/>
-
-			<!-- 搜索和筛选栏 -->
-			<div class="mb-6 space-y-3">
-				<!-- 搜索框 -->
-				<div class="w-full">
-					<div class="relative">
-						<input
-							type="text"
-							id="friend-search"
-							placeholder={i18n(I18nKey.friendsSearchPlaceholder)}
-							class="w-full px-4 py-2 pl-10 rounded-lg bg-[var(--btn-regular-bg)]
-									text-black/90 dark:text-white/90
-									border border-black/10 dark:border-white/10
-									focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50
-									transition-all duration-200"
-						/>
-						<svg
-							class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-black/40 dark:text-white/40"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-							></path>
-						</svg>
-					</div>
-				</div>
-
-				<!-- 标签筛选 -->
-				<div class="filter-container flex flex-wrap gap-2">
-					<button class="filter-tag active" data-tag="all">
-						{i18n(I18nKey.friendsFilterAll)}
-					</button>
-					{
-						allTags.map((tag) => (
-							<button class="filter-tag" data-tag={tag}>
-								{tag}
-							</button>
-						))
-					}
-				</div>
-			</div>
-
-			<!-- 友链卡片网格 -->
-			<div
-				id="friends-grid"
-				class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-6"
-			>
-				{friendsList.map((item) => <FriendCard friend={item} />)}
-			</div>
-
-			<!-- 无结果提示 -->
-			<div id="no-results" class="hidden text-center py-12">
-				<svg
-					class="w-16 h-16 mx-auto mb-4 text-black/20 dark:text-white/20"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					></path>
-				</svg>
-				<p class="text-black/50 dark:text-white/50 text-lg">
-					{i18n(I18nKey.friendsNoResults)}
-				</p>
-			</div>
-
-			<!-- 说明文档 -->
-			<Markdown class="mt-8 prose dark:prose-invert max-w-none">
-				<Content />
-			</Markdown>
-
-			<!-- 隐藏元素用于传递 i18n 文本到全局脚本 -->
-			<div id="friends-copy-success-text" style="display: none;">
-				{i18n(I18nKey.friendsCopySuccess)}
-			</div>
+<Layout title="友情链接" description="遇见有趣的灵魂与散落在互联网角落的星光。">
+	<div class="friends-page min-h-screen overflow-hidden text-white">
+		<div class="friends-bg" aria-hidden="true">
+			{
+				backgroundImages.map((image, index) => (
+					<img
+						class:list={[
+							"friends-bg-image",
+							{ active: index === 0 },
+						]}
+						src={image}
+						alt=""
+						loading={index === 0 ? "eager" : "lazy"}
+						decoding="async"
+					/>
+				))
+			}
 		</div>
-	</div>
+		<div class="friends-aurora" aria-hidden="true"></div>
+		<div class="friends-particles" aria-hidden="true">
+			{
+				particles.map((particle) => (
+					<i
+						style={`--left:${particle.left};--top:${particle.top};--size:${particle.size};--duration:${particle.duration};--delay:${particle.delay}`}
+					/>
+				))
+			}
+		</div>
 
-	<!-- 引用全局脚本 -->
-	<script is:inline src="/js/friends-page-handler.js"></script>
-</MainGridLayout>
+		<header class="friends-nav relative z-30">
+			<Navbar class="friends-navbar" />
+		</header>
+
+		<main
+			class="friends-main relative z-20 mx-auto w-full max-w-7xl px-4 pb-20 pt-10 sm:px-6 lg:px-8"
+		>
+			<section class="friends-hero mx-auto max-w-3xl text-center">
+				<p class="friends-kicker">Friends / Link Exchange</p>
+				<h1>友情链接</h1>
+				<p class="friends-subtitle">
+					遇见有趣的灵魂与散落在互联网角落的星光。
+				</p>
+			</section>
+
+			<section
+				class="friends-grid mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+				aria-label="友情链接列表"
+			>
+				{
+					friends.map((friend) => {
+						const hostname = new URL(friend.url).hostname;
+						const isOnline =
+							(friend.status ?? "online").toLowerCase() ===
+							"online";
+
+						return (
+							<a
+								class="friend-card group"
+								href={friend.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label={`访问 ${friend.name}`}
+							>
+								<span
+									class="friend-card-glow"
+									aria-hidden="true"
+								/>
+								<div class="friend-card-inner">
+									<div class="friend-avatar-wrap">
+										<img
+											class="friend-avatar"
+											src={friend.avatar}
+											alt={`${friend.name} 头像`}
+											loading="lazy"
+											decoding="async"
+										/>
+										<span
+											class:list={[
+												"friend-status",
+												isOnline
+													? "is-online"
+													: "is-idle",
+											]}
+											title={friend.status ?? "online"}
+										/>
+									</div>
+
+									<div class="min-w-0 flex-1">
+										<div class="flex items-start justify-between gap-3">
+											<h2>{friend.name}</h2>
+											<Icon
+												name="material-symbols:arrow-outward-rounded"
+												class="friend-link-icon"
+											/>
+										</div>
+										<p class="friend-desc">
+											{friend.description}
+										</p>
+										<span class="friend-host">
+											{hostname}
+										</span>
+									</div>
+								</div>
+							</a>
+						);
+					})
+				}
+			</section>
+		</main>
+
+		<div
+			class="friends-footer relative z-20 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
+		>
+			<Footer />
+		</div>
+
+		<FloatingControls headings={[]} />
+	</div>
+</Layout>
 
 <style>
-	/* 搜索框焦点效果 */
-	#friend-search:focus {
-		box-shadow: 0 0 0 3px var(--primary) / 0.1;
+	:global(html.dark) .friends-page,
+	.friends-page {
+		background: #060712;
 	}
 
-	/* 标签筛选按钮样式 */
-	.filter-container {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
+	.friends-page {
+		position: relative;
+		isolation: isolate;
 	}
 
-	.filter-tag {
-		padding: 0.5rem 1rem;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-		background: var(--btn-regular-bg);
-		color: var(--btn-content);
-		font-size: 0.875rem;
-		font-weight: 500;
+	.friends-bg {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		background: #060712;
+	}
+
+	.friends-bg-image {
+		position: absolute;
+		inset: -4%;
+		width: 108%;
+		height: 108%;
+		object-fit: cover;
+		filter: blur(18px) brightness(0.34) saturate(1.22);
+		opacity: 0;
+		transform: scale(1.04);
+		transition:
+			opacity 1800ms ease,
+			transform 11000ms ease;
+		will-change: opacity, transform;
+	}
+
+	.friends-bg-image.active {
+		opacity: 1;
+		transform: scale(1.1);
+	}
+
+	.friends-bg::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background:
+			radial-gradient(
+				circle at 16% 14%,
+				rgba(116, 95, 255, 0.28),
+				transparent 34rem
+			),
+			radial-gradient(
+				circle at 82% 18%,
+				rgba(41, 221, 255, 0.18),
+				transparent 28rem
+			),
+			linear-gradient(180deg, rgba(4, 5, 14, 0.42), rgba(3, 4, 12, 0.86));
+	}
+
+	.friends-aurora {
+		position: fixed;
+		inset: 0;
+		z-index: 1;
+		pointer-events: none;
+		background:
+			linear-gradient(
+				115deg,
+				transparent 10%,
+				rgba(88, 166, 255, 0.13),
+				transparent 34%
+			),
+			linear-gradient(
+				250deg,
+				transparent 20%,
+				rgba(255, 123, 223, 0.12),
+				transparent 46%
+			);
+		mix-blend-mode: screen;
+		animation: auroraDrift 18s ease-in-out infinite alternate;
+	}
+
+	.friends-particles {
+		position: fixed;
+		inset: 0;
+		z-index: 2;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.friends-particles i {
+		position: absolute;
+		left: var(--left);
+		top: var(--top);
+		width: var(--size);
+		height: var(--size);
+		border-radius: 999px;
+		background: rgba(201, 231, 255, 0.72);
+		box-shadow: 0 0 14px rgba(123, 206, 255, 0.7);
+		animation: particleFloat var(--duration) linear infinite;
+		animation-delay: var(--delay);
+	}
+
+	.friends-nav {
+		position: sticky;
+		top: 0;
+	}
+
+	:global(.friends-navbar) {
+		color: white;
+	}
+
+	.friends-main {
+		min-height: calc(100vh - 9rem);
+		animation: pageEnter 700ms ease-out both;
+	}
+
+	.friends-hero {
+		padding-top: clamp(2rem, 7vw, 6rem);
+		text-shadow: 0 0 24px rgba(130, 168, 255, 0.42);
+	}
+
+	.friends-kicker {
+		margin-bottom: 0.8rem;
+		color: rgba(185, 225, 255, 0.72);
+		font-size: 0.78rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+	}
+
+	.friends-hero h1 {
+		font-size: clamp(2.6rem, 9vw, 5.6rem);
+		font-weight: 900;
+		line-height: 1;
+		letter-spacing: 0;
+		background: linear-gradient(
+			120deg,
+			#ffffff 12%,
+			#bfe8ff 42%,
+			#f4c7ff 78%
+		);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	.friends-subtitle {
+		margin: 1.2rem auto 0;
+		max-width: 42rem;
+		color: rgba(235, 245, 255, 0.78);
+		font-size: clamp(1rem, 2.8vw, 1.22rem);
+		line-height: 1.8;
+	}
+
+	.friend-card {
+		position: relative;
+		min-height: 11.5rem;
 		cursor: pointer;
-		transition: all 0.2s ease;
+		border: 1px solid rgba(198, 225, 255, 0.18);
+		border-radius: 1.25rem;
+		background:
+			linear-gradient(
+				135deg,
+				rgba(255, 255, 255, 0.17),
+				rgba(255, 255, 255, 0.055)
+			),
+			rgba(12, 15, 31, 0.42);
+		box-shadow:
+			0 18px 48px rgba(0, 0, 0, 0.28),
+			inset 0 1px 0 rgba(255, 255, 255, 0.16);
+		backdrop-filter: blur(22px) saturate(1.35);
+		-webkit-backdrop-filter: blur(22px) saturate(1.35);
+		overflow: hidden;
+		transform: translate3d(var(--float-x, 0), var(--float-y, 0), 0);
+		transition:
+			transform 220ms ease,
+			border-color 220ms ease,
+			box-shadow 220ms ease,
+			background 220ms ease;
+	}
+
+	.friend-card:hover {
+		border-color: rgba(170, 222, 255, 0.58);
+		box-shadow:
+			0 24px 64px rgba(0, 0, 0, 0.34),
+			0 0 34px rgba(99, 190, 255, 0.28),
+			inset 0 1px 0 rgba(255, 255, 255, 0.22);
+		transform: translate3d(
+				var(--float-x, 0),
+				calc(var(--float-y, 0) - 6px),
+				0
+			)
+			scale(1.018);
+	}
+
+	.friend-card-glow {
+		position: absolute;
+		inset: -40%;
+		background: radial-gradient(
+			circle at var(--mx, 50%) var(--my, 50%),
+			rgba(118, 213, 255, 0.24),
+			transparent 34%
+		);
+		opacity: 0;
+		transition: opacity 220ms ease;
+	}
+
+	.friend-card:hover .friend-card-glow {
+		opacity: 1;
+	}
+
+	.friend-card-inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		gap: 1rem;
+		height: 100%;
+		padding: 1.25rem;
+	}
+
+	.friend-avatar-wrap {
+		position: relative;
+		width: 4.7rem;
+		height: 4.7rem;
+		flex: 0 0 auto;
+		border-radius: 1.15rem;
+		padding: 2px;
+		background: linear-gradient(
+			135deg,
+			rgba(165, 222, 255, 0.85),
+			rgba(255, 174, 238, 0.62)
+		);
+		box-shadow: 0 0 22px rgba(133, 203, 255, 0.24);
+	}
+
+	.friend-avatar {
+		width: 100%;
+		height: 100%;
+		border-radius: 1rem;
+		object-fit: cover;
+		transition: transform 260ms ease;
+	}
+
+	.friend-card:hover .friend-avatar {
+		transform: scale(1.06);
+	}
+
+	.friend-status {
+		position: absolute;
+		right: -0.1rem;
+		bottom: -0.1rem;
+		width: 0.9rem;
+		height: 0.9rem;
+		border: 2px solid rgba(9, 12, 28, 0.86);
+		border-radius: 999px;
+		box-shadow: 0 0 12px currentColor;
+	}
+
+	.friend-status.is-online {
+		color: #67f6b4;
+		background: #67f6b4;
+	}
+
+	.friend-status.is-idle {
+		color: #ffd36d;
+		background: #ffd36d;
+	}
+
+	.friend-card h2 {
+		color: rgba(255, 255, 255, 0.94);
+		font-size: 1.05rem;
+		font-weight: 850;
+		line-height: 1.35;
+		letter-spacing: 0;
+	}
+
+	.friend-link-icon {
+		margin-top: 0.1rem;
+		flex: 0 0 auto;
+		color: rgba(196, 231, 255, 0.58);
+		font-size: 1.25rem;
+		transition:
+			transform 220ms ease,
+			color 220ms ease;
+	}
+
+	.friend-card:hover .friend-link-icon {
+		color: #dff6ff;
+		transform: translate(2px, -2px);
+	}
+
+	.friend-desc {
+		margin-top: 0.65rem;
+		min-height: 2.9rem;
+		color: rgba(232, 244, 255, 0.7);
+		font-size: 0.94rem;
+		line-height: 1.65;
+	}
+
+	.friend-host {
+		display: inline-flex;
+		margin-top: 1rem;
+		max-width: 100%;
+		overflow: hidden;
+		color: rgba(188, 229, 255, 0.64);
+		font-size: 0.78rem;
+		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	.filter-tag:hover:not(.active) {
-		background: var(--btn-hover-bg);
-		border-color: var(--primary);
-		transform: translateY(-1px);
+	.friends-footer {
+		color: rgba(255, 255, 255, 0.72);
 	}
 
-	.filter-tag.active {
-		background: var(--primary);
-		color: white;
-		border-color: var(--primary);
+	@keyframes pageEnter {
+		from {
+			opacity: 0;
+			transform: translateY(18px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 
-	.filter-tag.active:hover {
-		background: var(--primary) !important;
-		color: white !important;
-		border-color: var(--primary) !important;
-		transform: translateY(-1px);
+	@keyframes auroraDrift {
+		from {
+			transform: translate3d(-2%, -1%, 0) scale(1);
+			opacity: 0.68;
+		}
+		to {
+			transform: translate3d(2%, 1%, 0) scale(1.05);
+			opacity: 0.95;
+		}
+	}
+
+	@keyframes particleFloat {
+		from {
+			transform: translate3d(0, 16vh, 0);
+			opacity: 0;
+		}
+		15%,
+		80% {
+			opacity: 0.78;
+		}
+		to {
+			transform: translate3d(22px, -110vh, 0);
+			opacity: 0;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.friend-card {
+			min-height: 10.5rem;
+			border-radius: 1rem;
+		}
+
+		.friend-card-inner {
+			padding: 1rem;
+		}
+
+		.friend-avatar-wrap {
+			width: 4rem;
+			height: 4rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.friends-main,
+		.friends-aurora,
+		.friends-particles i,
+		.friends-bg-image {
+			animation: none;
+			transition: none;
+		}
+
+		.friend-card,
+		.friend-card:hover {
+			transform: none;
+		}
 	}
 </style>
+
+<script>
+	const initFriendsPage = () => {
+		const root = document.querySelector<HTMLElement>(".friends-page");
+		if (!root) {
+			return;
+		}
+
+		const motionQuery = window.matchMedia(
+			"(prefers-reduced-motion: reduce)",
+		);
+		const slides = Array.from(
+			document.querySelectorAll<HTMLImageElement>(".friends-bg-image"),
+		);
+		let activeIndex = slides.findIndex((slide) =>
+			slide.classList.contains("active"),
+		);
+
+		if (activeIndex < 0) {
+			activeIndex = 0;
+			slides[0]?.classList.add("active");
+		}
+
+		if (!motionQuery.matches && slides.length > 1) {
+			window.setInterval(() => {
+				slides[activeIndex]?.classList.remove("active");
+				activeIndex = (activeIndex + 1) % slides.length;
+				slides[activeIndex]?.classList.add("active");
+			}, 10000);
+		}
+
+		const cards = Array.from(
+			document.querySelectorAll<HTMLAnchorElement>(".friend-card"),
+		);
+		const updateCard = (event: PointerEvent) => {
+			const card = event.currentTarget;
+			if (!(card instanceof HTMLAnchorElement)) {
+				return;
+			}
+			const rect = card.getBoundingClientRect();
+			const x = event.clientX - rect.left;
+			const y = event.clientY - rect.top;
+			card.style.setProperty("--mx", `${(x / rect.width) * 100}%`);
+			card.style.setProperty("--my", `${(y / rect.height) * 100}%`);
+
+			if (!motionQuery.matches) {
+				card.style.setProperty(
+					"--float-x",
+					`${(x / rect.width - 0.5) * 8}px`,
+				);
+				card.style.setProperty(
+					"--float-y",
+					`${(y / rect.height - 0.5) * 8}px`,
+				);
+			}
+		};
+
+		cards.forEach((card) => {
+			card.addEventListener("pointermove", updateCard);
+			card.addEventListener("pointerleave", () => {
+				card.style.setProperty("--float-x", "0px");
+				card.style.setProperty("--float-y", "0px");
+				card.style.setProperty("--mx", "50%");
+				card.style.setProperty("--my", "50%");
+			});
+		});
+
+		let ticking = false;
+		const handleParallax = (event: PointerEvent) => {
+			if (motionQuery.matches || ticking) {
+				return;
+			}
+
+			ticking = true;
+			window.requestAnimationFrame(() => {
+				const x = (event.clientX / window.innerWidth - 0.5) * 14;
+				const y = (event.clientY / window.innerHeight - 0.5) * 14;
+				root.style.setProperty("--parallax-x", `${x}px`);
+				root.style.setProperty("--parallax-y", `${y}px`);
+				document
+					.querySelector(".friends-aurora")
+					?.setAttribute(
+						"style",
+						`transform: translate3d(${x * -0.25}px, ${y * -0.25}px, 0);`,
+					);
+				ticking = false;
+			});
+		};
+
+		window.addEventListener("pointermove", handleParallax, {
+			passive: true,
+		});
+	};
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", initFriendsPage, {
+			once: true,
+		});
+	} else {
+		initFriendsPage();
+	}
+
+	document.addEventListener("astro:page-load", initFriendsPage);
+</script>
