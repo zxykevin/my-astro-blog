@@ -248,6 +248,90 @@ html {
     @apply rounded-(--radius-large) overflow-hidden bg-(--card-bg-transparent) backdrop-blur-sm transition-colors duration-150;
   }
 
+  body:not(.is-post-page) .glass-card,
+  body:not(.is-post-page) .glass-card-soft {
+    position: relative;
+    border: 1px solid color-mix(in oklab, var(--primary) 22%, transparent);
+    background:
+      radial-gradient(circle at var(--card-mx, 50%) var(--card-my, 50%), color-mix(in oklab, var(--primary) 18%, transparent), transparent 34%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42)), color-mix(in oklab, var(--card-bg) 72%, transparent) !important;
+    box-shadow:
+      0 18px 48px rgba(42, 128, 190, 0.14),
+      0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    backdrop-filter: blur(20px) saturate(1.25);
+    -webkit-backdrop-filter: blur(20px) saturate(1.25);
+    transform: translate3d(var(--card-float-x, 0), var(--card-float-y, 0), 0);
+    transition:
+      transform 220ms ease,
+      border-color 220ms ease,
+      box-shadow 220ms ease,
+      background-color 150ms ease;
+  }
+
+  :root.dark body:not(.is-post-page) .glass-card,
+  :root.dark body:not(.is-post-page) .glass-card-soft {
+    background:
+      radial-gradient(circle at var(--card-mx, 50%) var(--card-my, 50%), color-mix(in oklab, var(--primary) 24%, transparent), transparent 36%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.045)), color-mix(in oklab, var(--card-bg) 68%, transparent) !important;
+    box-shadow:
+      0 20px 56px rgba(0, 0, 0, 0.28),
+      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  }
+
+  body:not(.is-post-page) .glass-card-soft {
+    background:
+      radial-gradient(circle at var(--card-mx, 50%) var(--card-my, 50%), color-mix(in oklab, var(--primary) 9%, transparent), transparent 34%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.68)), color-mix(in oklab, var(--card-bg) 88%, transparent) !important;
+    box-shadow:
+      0 14px 36px rgba(42, 128, 190, 0.1),
+      0 0 0 1px rgba(255, 255, 255, 0.24) inset;
+    backdrop-filter: blur(14px) saturate(1.12);
+    -webkit-backdrop-filter: blur(14px) saturate(1.12);
+    transform: none;
+  }
+
+  :root.dark body:not(.is-post-page) .glass-card-soft {
+    background:
+      radial-gradient(circle at var(--card-mx, 50%) var(--card-my, 50%), color-mix(in oklab, var(--primary) 12%, transparent), transparent 34%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.12)), color-mix(in oklab, var(--card-bg) 86%, transparent) !important;
+  }
+
+  body:not(.is-post-page) .glass-card-interactive {
+    will-change: transform;
+  }
+
+  body:not(.is-post-page) .glass-card-interactive:hover {
+    border-color: color-mix(in oklab, var(--primary) 52%, rgba(255, 255, 255, 0.28));
+    box-shadow:
+      0 24px 64px rgba(42, 128, 190, 0.2),
+      0 0 34px color-mix(in oklab, var(--primary) 22%, transparent),
+      0 0 0 1px rgba(255, 255, 255, 0.28) inset;
+    transform: translate3d(var(--card-float-x, 0), calc(var(--card-float-y, 0) - 5px), 0) scale(1.008);
+  }
+
+  body:not(.is-post-page) .glass-card-soft:hover {
+    border-color: color-mix(in oklab, var(--primary) 30%, rgba(255, 255, 255, 0.3));
+    box-shadow:
+      0 16px 42px rgba(42, 128, 190, 0.13),
+      0 0 20px color-mix(in oklab, var(--primary) 11%, transparent),
+      0 0 0 1px rgba(255, 255, 255, 0.24) inset;
+  }
+
+  body.is-post-page .glass-card,
+  body.is-post-page .glass-card-soft,
+  body.is-post-page .glass-card-interactive,
+  #post-container.glass-card,
+  #post-container.glass-card-soft,
+  widget-layout[data-id="card-toc"].glass-card,
+  widget-layout[data-id="card-toc"].glass-card-soft {
+    border-color: transparent !important;
+    background: var(--card-bg) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transform: none !important;
+  }
+
   /* 全屏壁纸模式下的半透明效果 - 使用!important确保优先级 */
   .wallpaper-transparent .card-base {
     background: var(--card-bg-transparent) !important;
