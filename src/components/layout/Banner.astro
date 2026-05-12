@@ -529,7 +529,10 @@ const hasBannerLink = !!siteConfig.banner.credit.url;
 
 	<!-- 首页文字覆盖层 -->
 	{siteConfig.banner.homeText?.enable && (
-		<div class={`banner-text-overlay absolute inset-0 z-20 flex items-center justify-center ${!showTextOverlay ? "hidden" : ""}`}>
+		<div
+			class={`banner-text-overlay absolute inset-0 z-20 flex items-center justify-center ${!showTextOverlay ? "hidden" : ""}`}
+			data-home-banner-overlay={showTextOverlay ? "true" : undefined}
+		>
 			<div class="w-4/5 lg:w-3/4 text-center mb-0">
 				<div class="flex flex-col">
 					{overlayTitle && (
@@ -559,6 +562,87 @@ const hasBannerLink = !!siteConfig.banner.credit.url;
 			</div>
 		</div>
 	)}
+
+	{
+		showTextOverlay && (
+			<script is:inline data-swup-ignore-script>
+				(function initHomeBannerTextScroll() {
+					function init() {
+						var overlay = document.querySelector(
+							"[data-home-banner-overlay='true']",
+						);
+						if (!overlay || !document.body.classList.contains("lg:is-home")) {
+							return;
+						}
+
+						if (window.__homeBannerTextCleanup) {
+							window.__homeBannerTextCleanup();
+							window.__homeBannerTextCleanup = null;
+						}
+
+						var ticking = false;
+						var reduceMotion = window.matchMedia(
+							"(prefers-reduced-motion: reduce)",
+						);
+
+						function update() {
+							var distance = Math.max(window.innerHeight * 0.42, 1);
+							var progress = Math.min(Math.max(window.scrollY / distance, 0), 1);
+							var eased = progress * progress * (3 - 2 * progress);
+
+							if (reduceMotion.matches) {
+								eased = progress >= 0.2 ? 1 : 0;
+							}
+
+							overlay.style.setProperty(
+								"--home-banner-text-opacity",
+								String(1 - eased),
+							);
+							overlay.style.setProperty(
+								"--home-banner-text-scale",
+								String(1 - eased * 0.36),
+							);
+							overlay.style.setProperty(
+								"--home-banner-text-y",
+								`${eased * -36}px`,
+							);
+							overlay.style.pointerEvents = eased > 0.85 ? "none" : "";
+							ticking = false;
+						}
+
+						function requestUpdate() {
+							if (ticking) {
+								return;
+							}
+							ticking = true;
+							window.requestAnimationFrame(update);
+						}
+
+						window.addEventListener("scroll", requestUpdate, { passive: true });
+						window.addEventListener("resize", requestUpdate, { passive: true });
+						update();
+
+						window.__homeBannerTextCleanup = function () {
+							window.removeEventListener("scroll", requestUpdate);
+							window.removeEventListener("resize", requestUpdate);
+							overlay.style.removeProperty("--home-banner-text-opacity");
+							overlay.style.removeProperty("--home-banner-text-scale");
+							overlay.style.removeProperty("--home-banner-text-y");
+							overlay.style.pointerEvents = "";
+						};
+					}
+
+					if (document.readyState === "loading") {
+						document.addEventListener("DOMContentLoaded", init, { once: true });
+					} else {
+						init();
+					}
+
+					document.addEventListener("astro:page-load", init);
+				})();
+			</script>
+		)
+	}
 
 	<!-- 水波纹效果 -->
 	{showWave && (

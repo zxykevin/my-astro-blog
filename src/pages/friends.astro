@@ -292,8 +292,9 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 
 	.friends-grid {
 		display: grid;
-		grid-template-columns: repeat(1, minmax(0, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
 		gap: 1.5rem;
+		align-items: stretch;
 		margin-top: clamp(2.5rem, 5vw, 4rem);
 	}
 
@@ -429,6 +430,7 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 		font-weight: 850;
 		line-height: 1.35;
 		letter-spacing: 0;
+		overflow-wrap: anywhere;
 	}
 
 	.friend-link-icon {
@@ -452,6 +454,7 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 		color: rgba(232, 244, 255, 0.7);
 		font-size: 0.94rem;
 		line-height: 1.65;
+		overflow-wrap: anywhere;
 	}
 
 	.friend-host {
@@ -463,24 +466,6 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 		font-size: 0.78rem;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	@media (min-width: 640px) {
-		.friends-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-	}
-
-	@media (min-width: 1280px) {
-		.friends-grid {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
-	}
-
-	@media (min-width: 1536px) {
-		.friends-grid {
-			grid-template-columns: repeat(4, minmax(0, 1fr));
-		}
 	}
 
 	@media (max-width: 640px) {
@@ -557,43 +542,51 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 </style>
 
 <script>
+	type FriendCardElement = HTMLAnchorElement & {
+		__mizukiFriendPointerMove?: (event: PointerEvent) => void;
+		__mizukiFriendPointerLeave?: () => void;
+	};
+
 	const initFriendsPage = () => {
 		const root = document.querySelector<HTMLElement>(".friends-page");
-		if (!root || root.dataset.friendsReady === "true") {
+		if (!root) {
 			return;
 		}
-
-		root.dataset.friendsReady = "true";
 
 		const motionQuery = window.matchMedia(
 			"(prefers-reduced-motion: reduce)",
 		);
-		const slides = Array.from(
-			root.querySelectorAll<HTMLImageElement>(".friends-bg-image"),
-		);
-		let activeIndex = slides.findIndex((slide) =>
-			slide.classList.contains("active"),
-		);
 
-		if (activeIndex < 0) {
-			activeIndex = 0;
-			slides[0]?.classList.add("active");
-		}
+		if (root.dataset.friendsReady !== "true") {
+			root.dataset.friendsReady = "true";
 
-		if (!motionQuery.matches && slides.length > 1) {
-			window.setInterval(() => {
-				if (!root.isConnected) {
-					return;
-				}
+			const slides = Array.from(
+				root.querySelectorAll<HTMLImageElement>(".friends-bg-image"),
+			);
+			let activeIndex = slides.findIndex((slide) =>
+				slide.classList.contains("active"),
+			);
 
-				slides[activeIndex]?.classList.remove("active");
-				activeIndex = (activeIndex + 1) % slides.length;
-				slides[activeIndex]?.classList.add("active");
-			}, 10000);
+			if (activeIndex < 0) {
+				activeIndex = 0;
+				slides[0]?.classList.add("active");
+			}
+
+			if (!motionQuery.matches && slides.length > 1) {
+				window.setInterval(() => {
+					if (!root.isConnected) {
+						return;
+					}
+
+					slides[activeIndex]?.classList.remove("active");
+					activeIndex = (activeIndex + 1) % slides.length;
+					slides[activeIndex]?.classList.add("active");
+				}, 10000);
+			}
 		}
 
 		const cards = Array.from(
-			root.querySelectorAll<HTMLAnchorElement>(".friend-card"),
+			root.querySelectorAll<FriendCardElement>(".friend-card"),
 		);
 		const updateCard = (event: PointerEvent) => {
 			const card = event.currentTarget;
@@ -610,23 +603,39 @@ const particles = Array.from({ length: 22 }, (_, index) => ({
 			if (!motionQuery.matches) {
 				card.style.setProperty(
 					"--float-x",
-					`${(x / rect.width - 0.5) * 8}px`,
+					`${(x / rect.width - 0.5) * 10}px`,
 				);
 				card.style.setProperty(
 					"--float-y",
-					`${(y / rect.height - 0.5) * 8}px`,
+					`${(y / rect.height - 0.5) * 10}px`,
 				);
 			}
 		};
 
 		cards.forEach((card) => {
-			card.addEventListener("pointermove", updateCard);
-			card.addEventListener("pointerleave", () => {
+			if (card.__mizukiFriendPointerMove) {
+				card.removeEventListener(
+					"pointermove",
+					card.__mizukiFriendPointerMove,
+				);
+			}
+			if (card.__mizukiFriendPointerLeave) {
+				card.removeEventListener(
+					"pointerleave",
+					card.__mizukiFriendPointerLeave,
+				);
+			}
+
+			card.__mizukiFriendPointerMove = updateCard;
+			card.__mizukiFriendPointerLeave = () => {
 				card.style.setProperty("--float-x", "0px");
 				card.style.setProperty("--float-y", "0px");
 				card.style.setProperty("--mx", "50%");
 				card.style.setProperty("--my", "50%");
-			});
+			};
+
+			card.addEventListener("pointermove", card.__mizukiFriendPointerMove);
+			card.addEventListener("pointerleave", card.__mizukiFriendPointerLeave);
 		});
 	};
 

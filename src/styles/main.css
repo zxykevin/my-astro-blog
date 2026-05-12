@@ -322,8 +322,8 @@ html {
   body.is-post-page .glass-card-interactive,
   #post-container.glass-card,
   #post-container.glass-card-soft,
-  widget-layout[data-id="card-toc"].glass-card,
-  widget-layout[data-id="card-toc"].glass-card-soft {
+  body.is-post-page widget-layout[data-id="card-toc"].glass-card,
+  body.is-post-page widget-layout[data-id="card-toc"].glass-card-soft {
     border-color: transparent !important;
     background: var(--card-bg) !important;
     box-shadow: none !important;
