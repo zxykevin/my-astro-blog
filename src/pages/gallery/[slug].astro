@@ -30,9 +30,9 @@ const optimizedPhotos = await Promise.all(
 		...photo,
 		lightbox: await getImage({
 			src: photo.src,
-			width: 2000,
+			width: 1600,
 			format: "webp",
-			quality: 82,
+			quality: 80,
 		}),
 	})),
 );
@@ -109,7 +109,7 @@ const optimizedPhotos = await Promise.all(
 		</div>
 	</article>
 
-	<div class="gallery-lightbox" data-gallery-lightbox hidden>
+	<div class="gallery-lightbox" data-gallery-lightbox hidden aria-hidden="true">
 		<button
 			class="gallery-lightbox-close"
 			type="button"
@@ -121,47 +121,80 @@ const optimizedPhotos = await Promise.all(
 				class="gallery-lightbox-close-icon"
 			/>
 		</button>
-		<img
-			alt=""
-			width="2000"
-			height="1333"
-			decoding="async"
-			data-lightbox-image
-		/>
-		<div class="gallery-lightbox-caption">
-			<p data-lightbox-caption></p>
-			<span data-lightbox-camera></span>
-		</div>
+		<div class="gallery-lightbox-stage" data-lightbox-stage></div>
 	</div>
 
 	<script>
+		type GalleryLightboxElement = HTMLElement & {
+			__galleryAbortController?: AbortController;
+		};
+
+		type ActivePhoto = {
+			src: string;
+			alt: string;
+		};
+
 		const initGalleryDetail = () => {
-			const lightbox = document.querySelector<HTMLElement>(
+			const lightbox = document.querySelector<GalleryLightboxElement>(
 				"[data-gallery-lightbox]",
 			);
-			const lightboxImage = document.querySelector<HTMLImageElement>(
-				"[data-lightbox-image]",
-			);
-			const lightboxCaption = document.querySelector<HTMLElement>(
-				"[data-lightbox-caption]",
-			);
-			const lightboxCamera = document.querySelector<HTMLElement>(
-				"[data-lightbox-camera]",
+			const lightboxStage = lightbox?.querySelector<HTMLElement>(
+				"[data-lightbox-stage]",
 			);
 			const closeButton = document.querySelector<HTMLButtonElement>(
 				"[data-lightbox-close]",
 			);
 
-			if (!lightbox || !lightboxImage || !lightboxCaption) {
+			if (!lightbox || !lightboxStage) {
 				return;
 			}
 
-			const closeLightbox = () => {
-				lightbox.hidden = true;
-				lightboxImage.removeAttribute("src");
-				document.documentElement.classList.remove(
+			if (lightbox.parentElement !== document.body) {
+				document.body.append(lightbox);
+			}
+
+			lightbox.__galleryAbortController?.abort();
+
+			const controller = new AbortController();
+			lightbox.__galleryAbortController = controller;
+			const { signal } = controller;
+			let activePhoto: ActivePhoto | null = null;
+
+			const renderLightbox = () => {
+				lightboxStage.replaceChildren();
+
+				if (!activePhoto) {
+					lightbox.hidden = true;
+					lightbox.setAttribute("aria-hidden", "true");
+					document.documentElement.classList.remove(
+						"gallery-lightbox-open",
+					);
+					return;
+				}
+
+				const previewImage = document.createElement("img");
+				previewImage.src = activePhoto.src;
+				previewImage.alt = activePhoto.alt;
+				previewImage.decoding = "async";
+				previewImage.addEventListener(
+					"click",
+					(event) => {
+						event.stopPropagation();
+					},
+					{ signal },
+				);
+
+				lightboxStage.append(previewImage);
+				lightbox.hidden = false;
+				lightbox.setAttribute("aria-hidden", "false");
+				document.documentElement.classList.add(
 					"gallery-lightbox-open",
 				);
+			};
+
+			const closeLightbox = () => {
+				activePhoto = null;
+				renderLightbox();
 			};
 
 			document
@@ -173,36 +206,36 @@ const optimizedPhotos = await Promise.all(
 							return;
 						}
 
-						lightboxImage.src = src;
-						lightboxImage.alt = button.dataset.lightboxAlt ?? "";
-						lightboxCaption.textContent =
-							button.dataset.lightboxCaption ?? "";
-
-						if (lightboxCamera) {
-							lightboxCamera.textContent =
-								button.dataset.lightboxCamera ?? "";
-							lightboxCamera.hidden =
-								!button.dataset.lightboxCamera;
-						}
-
-						lightbox.hidden = false;
-						document.documentElement.classList.add(
-							"gallery-lightbox-open",
-						);
+						activePhoto = {
+							src,
+							alt: button.dataset.lightboxAlt ?? "",
+						};
+						renderLightbox();
 					};
 				});
 
-			closeButton?.addEventListener("click", closeLightbox);
-			lightbox.onclick = (event) => {
-				if (event.target === lightbox) {
+			closeButton?.addEventListener(
+				"click",
+				(event) => {
+					event.preventDefault();
+					event.stopPropagation();
 					closeLightbox();
-				}
-			};
-			document.addEventListener("keydown", (event) => {
-				if (event.key === "Escape" && !lightbox.hidden) {
-					closeLightbox();
-				}
-			});
+				},
+				{ signal },
+			);
+			lightbox.addEventListener("click", closeLightbox, { signal });
+			document.addEventListener(
+				"keydown",
+				(event) => {
+					if (
+						event.key === "Escape" &&
+						lightbox.getAttribute("aria-hidden") === "false"
+					) {
+						closeLightbox();
+					}
+				},
+				{ signal },
+			);
 		};
 
 		if (document.readyState === "loading") {
@@ -410,57 +443,62 @@ const optimizedPhotos = await Promise.all(
 	.gallery-lightbox {
 		position: fixed;
 		inset: 0;
-		z-index: 1000;
-		display: grid;
-		place-items: center;
-		padding: 1rem;
-		background: rgba(3, 5, 14, 0.78);
-		backdrop-filter: blur(18px);
-		-webkit-backdrop-filter: blur(18px);
+		width: 100vw;
+		height: 100vh;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.75);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		view-transition-name: none;
 	}
 
 	.gallery-lightbox[hidden] {
 		display: none;
 	}
 
-	.gallery-lightbox img {
-		max-width: min(92vw, 72rem);
-		max-height: 78vh;
-		border-radius: 1rem;
+	.gallery-lightbox-stage {
+		display: contents;
+		view-transition-name: none;
+	}
+
+	.gallery-lightbox-stage img {
+		display: block;
+		max-width: 92vw;
+		max-height: 86vh;
+		width: auto;
+		height: auto;
 		object-fit: contain;
-		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+		border-radius: 16px;
+		view-transition-name: none;
 	}
 
 	.gallery-lightbox-close {
 		position: fixed;
-		top: 1rem;
-		right: 1rem;
+		top: max(1rem, env(safe-area-inset-top));
+		right: max(1rem, env(safe-area-inset-right));
 		display: grid;
 		width: 2.75rem;
 		height: 2.75rem;
 		place-items: center;
 		border: 1px solid rgba(217, 239, 255, 0.2);
 		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.1);
+		background: rgba(255, 255, 255, 0.13);
 		color: white;
+		box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		transition: background 180ms ease;
+	}
+
+	.gallery-lightbox-close:hover {
+		background: rgba(255, 255, 255, 0.2);
 	}
 
 	.gallery-lightbox-close-icon {
 		font-size: 1.35rem;
-	}
-
-	.gallery-lightbox-caption {
-		max-width: min(92vw, 48rem);
-		margin-top: 1rem;
-		text-align: center;
-		color: rgba(242, 249, 255, 0.86);
-	}
-
-	.gallery-lightbox-caption span {
-		display: block;
-		margin-top: 0.35rem;
-		color: rgba(205, 232, 255, 0.58);
-		font-size: 0.82rem;
 	}
 
 	@media (min-width: 720px) {
@@ -478,7 +516,7 @@ const optimizedPhotos = await Promise.all(
 	@media (max-width: 640px) {
 		.gallery-detail,
 		.photo-card,
-		.gallery-lightbox img {
+		.gallery-lightbox-stage img {
 			border-radius: 1rem;
 		}
 	}
@@ -488,5 +526,9 @@ const optimizedPhotos = await Promise.all(
 		.photo-button img {
 			transition: none;
 		}
+	}
+
+	:global(html.gallery-lightbox-open) {
+		overflow: hidden;
 	}
 </style>
