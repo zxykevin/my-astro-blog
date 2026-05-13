@@ -25,6 +25,13 @@ export class FancyboxHandler {
 	 * 按需加载 Fancybox 模块和样式
 	 */
 	async init(): Promise<void> {
+		if (this.shouldDisableOnIPhone()) {
+			this.cleanup();
+			this.disableIPhoneTriggers();
+			this.initialized = false;
+			return;
+		}
+
 		const hasImages = this.checkForImages();
 
 		if (!hasImages) {
@@ -54,6 +61,27 @@ export class FancyboxHandler {
 			document.querySelector(FANCYBOX_SELECTORS.albumLinks) !== null ||
 			document.querySelector(FANCYBOX_SELECTORS.singleFancybox) !== null
 		);
+	}
+
+	private shouldDisableOnIPhone(): boolean {
+		const isIPhone = /iPhone/.test(navigator.userAgent);
+		const { pathname } = window.location;
+
+		return (
+			isIPhone &&
+			(pathname.startsWith("/posts/") || pathname.startsWith("/gallery/"))
+		);
+	}
+
+	private disableIPhoneTriggers(): void {
+		document
+			.querySelectorAll<HTMLElement>("[data-fancybox]")
+			.forEach((element) => {
+				element.setAttribute("aria-disabled", "true");
+				if (element instanceof HTMLButtonElement) {
+					element.disabled = true;
+				}
+			});
 	}
 
 	/**
