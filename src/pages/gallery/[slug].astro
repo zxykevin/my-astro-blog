@@ -1,5 +1,6 @@
 ---
 import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { getImage, Image } from "astro:assets";
 import { Icon } from "astro-icon/components";
 
 import { galleries, type Gallery } from "../../data/galleries";
@@ -24,6 +25,17 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 });
 
 const formattedDate = dateFormatter.format(new Date(gallery.date));
+const optimizedPhotos = await Promise.all(
+	gallery.photos.map(async (photo) => ({
+		...photo,
+		lightbox: await getImage({
+			src: photo.src,
+			width: 2000,
+			format: "webp",
+			quality: 82,
+		}),
+	})),
+);
 ---
 
 <MainGridLayout
@@ -65,30 +77,26 @@ const formattedDate = dateFormatter.format(new Date(gallery.date));
 
 		<div class="photo-grid" aria-label={`${gallery.title} 图片列表`}>
 			{
-				gallery.photos.map((photo, index) => (
+				optimizedPhotos.map((photo) => (
 					<figure class="photo-card">
 						<button
 							class="photo-button"
 							type="button"
-							data-lightbox-src={photo.src}
+							data-lightbox-src={photo.lightbox.src}
 							data-lightbox-alt={photo.alt}
 							data-lightbox-caption={photo.caption}
 							data-lightbox-camera={photo.camera ?? ""}
 							aria-label={`放大查看：${photo.alt}`}
 						>
-							<div class="photo-fallback" hidden>
-								<Icon
-									name="material-symbols:hide-image-outline"
-									class="photo-fallback-icon"
-								/>
-								<span>请添加图片 {index + 1}</span>
-							</div>
-							<img
+							<Image
 								src={photo.src}
 								alt={photo.alt}
+								widths={[520, 800, 1200, 1600]}
+								sizes="(max-width: 719px) 92vw, (max-width: 1179px) 44vw, 30vw"
+								format="webp"
+								quality={80}
 								loading="lazy"
 								decoding="async"
-								data-gallery-image
 							/>
 						</button>
 						<figcaption>
@@ -113,7 +121,13 @@ const formattedDate = dateFormatter.format(new Date(gallery.date));
 				class="gallery-lightbox-close-icon"
 			/>
 		</button>
-		<img alt="" data-lightbox-image />
+		<img
+			alt=""
+			width="2000"
+			height="1333"
+			decoding="async"
+			data-lightbox-image
+		/>
 		<div class="gallery-lightbox-caption">
 			<p data-lightbox-caption></p>
 			<span data-lightbox-camera></span>
@@ -122,26 +136,6 @@ const formattedDate = dateFormatter.format(new Date(gallery.date));
 
 	<script>
 		const initGalleryDetail = () => {
-			document
-				.querySelectorAll<HTMLImageElement>("[data-gallery-image]")
-				.forEach((image) => {
-					const fallback = image.previousElementSibling;
-					const showFallback = () => {
-						image.hidden = true;
-						if (fallback instanceof HTMLElement) {
-							fallback.hidden = false;
-						}
-					};
-
-					image.addEventListener("error", showFallback, {
-						once: true,
-					});
-
-					if (image.complete && image.naturalWidth === 0) {
-						showFallback();
-					}
-				});
-
 			const lightbox = document.querySelector<HTMLElement>(
 				"[data-gallery-lightbox]",
 			);
@@ -395,23 +389,6 @@ const formattedDate = dateFormatter.format(new Date(gallery.date));
 	.photo-card:hover .photo-button img {
 		filter: brightness(1.05);
 		transform: scale(1.045);
-	}
-
-	.photo-fallback {
-		position: absolute;
-		inset: 0;
-		z-index: 1;
-		display: grid;
-		place-items: center;
-		align-content: center;
-		gap: 0.6rem;
-		color: rgba(229, 244, 255, 0.76);
-		font-size: 0.9rem;
-	}
-
-	.photo-fallback-icon {
-		font-size: 2rem;
-		color: rgba(204, 233, 255, 0.82);
 	}
 
 	.photo-card figcaption {

@@ -1,5 +1,6 @@
 ---
 import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { Image } from "astro:assets";
 import { Icon } from "astro-icon/components";
 
 import { galleries } from "../data/galleries";
@@ -31,19 +32,15 @@ const formatDate = (date: string) => dateFormatter.format(new Date(date));
 					<a class="gallery-card" href={`/gallery/${gallery.slug}/`}>
 						<span class="gallery-card-glow" aria-hidden="true" />
 						<div class="gallery-cover">
-							<div class="gallery-image-fallback" hidden>
-								<Icon
-									name="material-symbols:photo-library"
-									class="gallery-fallback-icon"
-								/>
-								<span>请添加封面图片</span>
-							</div>
-							<img
+							<Image
 								src={gallery.cover}
 								alt={`${gallery.title} 封面`}
+								widths={[480, 800, 1200, 1600]}
+								sizes="(max-width: 640px) 92vw, (max-width: 1180px) 45vw, 33vw"
+								format="webp"
+								quality={80}
 								loading="lazy"
 								decoding="async"
-								data-gallery-image
 							/>
 						</div>
 						<div class="gallery-card-body">
@@ -76,40 +73,6 @@ const formatDate = (date: string) => dateFormatter.format(new Date(date));
 			}
 		</div>
 	</section>
-
-	<script>
-		const initGalleryImages = () => {
-			document
-				.querySelectorAll<HTMLImageElement>("[data-gallery-image]")
-				.forEach((image) => {
-					const fallback = image.previousElementSibling;
-					const showFallback = () => {
-						image.hidden = true;
-						if (fallback instanceof HTMLElement) {
-							fallback.hidden = false;
-						}
-					};
-
-					image.addEventListener("error", showFallback, {
-						once: true,
-					});
-
-					if (image.complete && image.naturalWidth === 0) {
-						showFallback();
-					}
-				});
-		};
-
-		if (document.readyState === "loading") {
-			document.addEventListener("DOMContentLoaded", initGalleryImages, {
-				once: true,
-			});
-		} else {
-			initGalleryImages();
-		}
-
-		document.addEventListener("astro:page-load", initGalleryImages);
-	</script>
 </MainGridLayout>
 
 <style>
@@ -245,23 +208,6 @@ const formatDate = (date: string) => dateFormatter.format(new Date(date));
 
 	.gallery-card:hover .gallery-cover img {
 		transform: scale(1.055);
-	}
-
-	.gallery-image-fallback {
-		position: absolute;
-		inset: 0;
-		z-index: 1;
-		display: grid;
-		place-items: center;
-		align-content: center;
-		gap: 0.6rem;
-		color: rgba(229, 244, 255, 0.76);
-		font-size: 0.9rem;
-	}
-
-	.gallery-fallback-icon {
-		font-size: 2rem;
-		color: rgba(204, 233, 255, 0.82);
 	}
 
 	.gallery-card-body {
