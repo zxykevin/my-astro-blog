@@ -24,6 +24,16 @@
   opacity: 0.82;
 }
 
+.custom-md img,
+#post-cover img,
+[data-fancybox],
+[data-fancybox-trigger],
+.fancybox__container,
+.fancybox__content,
+.fancybox__content img {
+  view-transition-name: none;
+}
+
 @keyframes fancybox-fade-in {
   from {
     opacity: 0;

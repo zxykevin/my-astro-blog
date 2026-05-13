@@ -35,11 +35,9 @@ export class FancyboxHandler {
 			await this.loadFancybox();
 		}
 
+		this.cleanup();
+		this.markPreviewTriggers();
 		this.bindInstantPreviewCapture();
-
-		if (this.boundSelectors.length > 0) {
-			return;
-		}
 
 		this.bindImageSelectors();
 		this.initialized = true;
@@ -91,10 +89,6 @@ export class FancyboxHandler {
 	}
 
 	private bindInstantPreviewCapture(): void {
-		if (this.clickController) {
-			return;
-		}
-
 		this.clickController = new AbortController();
 		document.addEventListener(
 			"click",
@@ -108,16 +102,38 @@ export class FancyboxHandler {
 					return;
 				}
 
+				event.preventDefault();
+				event.stopPropagation();
 				this.prepareInstantPreview(trigger);
 				this.preloadAroundTrigger(trigger);
 
 				if (this.openInstantPreview(trigger)) {
-					event.preventDefault();
 					event.stopImmediatePropagation();
 				}
 			},
 			{ capture: true, signal: this.clickController.signal },
 		);
+	}
+
+	private markPreviewTriggers(): void {
+		document
+			.querySelectorAll<HTMLElement>(FANCYBOX_CLICK_SELECTOR)
+			.forEach((trigger) => {
+				trigger.setAttribute("data-no-swup", "");
+				trigger.setAttribute("data-fancybox-trigger", "");
+				trigger.style.viewTransitionName = "none";
+
+				const anchor =
+					trigger instanceof HTMLAnchorElement
+						? trigger
+						: trigger.closest<HTMLAnchorElement>("a");
+
+				if (anchor) {
+					anchor.setAttribute("data-no-swup", "");
+					anchor.setAttribute("rel", "noopener nofollow");
+					anchor.style.viewTransitionName = "none";
+				}
+			});
 	}
 
 	private getInstantPreviewConfig() {
@@ -225,8 +241,16 @@ export class FancyboxHandler {
 			trigger.dataset.fullSrc = fullSrc;
 		}
 
+		trigger.setAttribute("data-no-swup", "");
+		trigger.style.viewTransitionName = "none";
 		trigger.dataset.instantSrc = instantSrc;
 		trigger.setAttribute("data-src", instantSrc);
+
+		const anchor =
+			trigger instanceof HTMLAnchorElement
+				? trigger
+				: trigger.closest<HTMLAnchorElement>("a");
+		anchor?.setAttribute("data-no-swup", "");
 
 		if (!trigger.getAttribute("data-thumb")) {
 			trigger.setAttribute("data-thumb", instantSrc);
@@ -388,16 +412,22 @@ export class FancyboxHandler {
 	}
 
 	cleanup(): void {
-		if (!this.Fancybox) {
-			return;
-		}
+		if (this.Fancybox) {
+			const selectors = new Set([
+				...this.boundSelectors,
+				FANCYBOX_SELECTORS.albumImages,
+				FANCYBOX_SELECTORS.albumLinks,
+				FANCYBOX_SELECTORS.singleFancybox,
+			]);
 
-		this.boundSelectors.forEach((selector) => {
-			this.Fancybox.unbind(selector);
-		});
+			selectors.forEach((selector) => {
+				this.Fancybox.unbind(selector);
+			});
+		}
 		this.boundSelectors = [];
 		this.clickController?.abort();
 		this.clickController = null;
+		this.initialized = false;
 	}
 
 	destroy(): void {
