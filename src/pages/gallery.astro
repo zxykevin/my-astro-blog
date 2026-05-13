@@ -1,0 +1,340 @@
+---
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { Icon } from "astro-icon/components";
+
+import { galleries } from "../data/galleries";
+
+export const prerender = true;
+
+const title = "图库";
+const description = "旅行、巡礼与生活切片的静态相册。";
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+	year: "numeric",
+	month: "long",
+	day: "numeric",
+});
+
+const formatDate = (date: string) => dateFormatter.format(new Date(date));
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="gallery-page" aria-labelledby="gallery-title">
+		<div class="gallery-hero">
+			<p class="gallery-kicker">Gallery / Photo Albums</p>
+			<h1 id="gallery-title">图库</h1>
+			<p>{description}</p>
+		</div>
+
+		<div class="gallery-grid" aria-label="相册列表">
+			{
+				galleries.map((gallery) => (
+					<a class="gallery-card" href={`/gallery/${gallery.slug}/`}>
+						<span class="gallery-card-glow" aria-hidden="true" />
+						<div class="gallery-cover">
+							<div class="gallery-image-fallback" hidden>
+								<Icon
+									name="material-symbols:photo-library"
+									class="gallery-fallback-icon"
+								/>
+								<span>请添加封面图片</span>
+							</div>
+							<img
+								src={gallery.cover}
+								alt={`${gallery.title} 封面`}
+								loading="lazy"
+								decoding="async"
+								data-gallery-image
+							/>
+						</div>
+						<div class="gallery-card-body">
+							<div class="gallery-card-meta">
+								<span>
+									<Icon
+										name="material-symbols:calendar-today"
+										class="gallery-meta-icon"
+									/>
+									{formatDate(gallery.date)}
+								</span>
+								<span>
+									<Icon
+										name="material-symbols:location-on"
+										class="gallery-meta-icon"
+									/>
+									{gallery.location}
+								</span>
+							</div>
+							<h2>{gallery.title}</h2>
+							<p>{gallery.description}</p>
+							<div class="gallery-tags">
+								{gallery.tags.map((tag) => (
+									<span>{tag}</span>
+								))}
+							</div>
+						</div>
+					</a>
+				))
+			}
+		</div>
+	</section>
+
+	<script>
+		const initGalleryImages = () => {
+			document
+				.querySelectorAll<HTMLImageElement>("[data-gallery-image]")
+				.forEach((image) => {
+					const fallback = image.previousElementSibling;
+					const showFallback = () => {
+						image.hidden = true;
+						if (fallback instanceof HTMLElement) {
+							fallback.hidden = false;
+						}
+					};
+
+					image.addEventListener("error", showFallback, {
+						once: true,
+					});
+
+					if (image.complete && image.naturalWidth === 0) {
+						showFallback();
+					}
+				});
+		};
+
+		if (document.readyState === "loading") {
+			document.addEventListener("DOMContentLoaded", initGalleryImages, {
+				once: true,
+			});
+		} else {
+			initGalleryImages();
+		}
+
+		document.addEventListener("astro:page-load", initGalleryImages);
+	</script>
+</MainGridLayout>
+
+<style>
+	.gallery-page {
+		position: relative;
+		isolation: isolate;
+		overflow: hidden;
+		border-radius: var(--radius-large);
+		padding: clamp(1.25rem, 4vw, 2.5rem);
+		background:
+			radial-gradient(
+				circle at 12% 10%,
+				rgba(125, 214, 255, 0.24),
+				transparent 28rem
+			),
+			radial-gradient(
+				circle at 88% 14%,
+				rgba(255, 155, 218, 0.18),
+				transparent 26rem
+			),
+			linear-gradient(
+				145deg,
+				rgba(12, 17, 36, 0.78),
+				rgba(20, 22, 48, 0.5)
+			);
+		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24);
+		color: rgba(255, 255, 255, 0.92);
+		backdrop-filter: blur(18px) saturate(1.2);
+		-webkit-backdrop-filter: blur(18px) saturate(1.2);
+	}
+
+	.gallery-hero {
+		max-width: 44rem;
+		margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+	}
+
+	.gallery-kicker {
+		margin-bottom: 0.65rem;
+		color: rgba(190, 229, 255, 0.74);
+		font-size: 0.78rem;
+		font-weight: 800;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+	}
+
+	.gallery-hero h1 {
+		font-size: clamp(2.25rem, 8vw, 4.75rem);
+		font-weight: 900;
+		line-height: 1;
+		letter-spacing: 0;
+		background: linear-gradient(120deg, #fff, #bfe8ff 48%, #ffd3ef);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	.gallery-hero p:last-child {
+		margin-top: 1rem;
+		color: rgba(239, 247, 255, 0.76);
+		font-size: 1rem;
+		line-height: 1.8;
+	}
+
+	.gallery-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+		gap: 1.2rem;
+	}
+
+	.gallery-card {
+		position: relative;
+		overflow: hidden;
+		border: 1px solid rgba(204, 230, 255, 0.18);
+		border-radius: 1.15rem;
+		background:
+			linear-gradient(
+				135deg,
+				rgba(255, 255, 255, 0.16),
+				rgba(255, 255, 255, 0.055)
+			),
+			rgba(8, 12, 28, 0.45);
+		box-shadow:
+			0 18px 48px rgba(0, 0, 0, 0.25),
+			inset 0 1px 0 rgba(255, 255, 255, 0.16);
+		backdrop-filter: blur(20px) saturate(1.35);
+		-webkit-backdrop-filter: blur(20px) saturate(1.35);
+		transition:
+			transform 220ms ease,
+			border-color 220ms ease,
+			box-shadow 220ms ease;
+	}
+
+	.gallery-card:hover {
+		border-color: rgba(174, 224, 255, 0.58);
+		box-shadow:
+			0 24px 64px rgba(0, 0, 0, 0.32),
+			0 0 34px rgba(99, 190, 255, 0.24),
+			inset 0 1px 0 rgba(255, 255, 255, 0.24);
+		transform: translateY(-6px);
+	}
+
+	.gallery-card-glow {
+		position: absolute;
+		inset: -40%;
+		background: radial-gradient(
+			circle at 50% 0%,
+			rgba(122, 211, 255, 0.18),
+			transparent 34%
+		);
+		opacity: 0;
+		transition: opacity 220ms ease;
+	}
+
+	.gallery-card:hover .gallery-card-glow {
+		opacity: 1;
+	}
+
+	.gallery-cover {
+		position: relative;
+		aspect-ratio: 16 / 10;
+		overflow: hidden;
+		background:
+			linear-gradient(135deg, rgba(123, 205, 255, 0.18), transparent),
+			rgba(255, 255, 255, 0.07);
+	}
+
+	.gallery-cover img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transition: transform 360ms ease;
+	}
+
+	.gallery-card:hover .gallery-cover img {
+		transform: scale(1.055);
+	}
+
+	.gallery-image-fallback {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		align-content: center;
+		gap: 0.6rem;
+		color: rgba(229, 244, 255, 0.76);
+		font-size: 0.9rem;
+	}
+
+	.gallery-fallback-icon {
+		font-size: 2rem;
+		color: rgba(204, 233, 255, 0.82);
+	}
+
+	.gallery-card-body {
+		position: relative;
+		z-index: 1;
+		padding: 1.1rem;
+	}
+
+	.gallery-card-meta,
+	.gallery-card-meta span {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.gallery-card-meta {
+		flex-wrap: wrap;
+		gap: 0.45rem 0.8rem;
+		color: rgba(210, 234, 255, 0.66);
+		font-size: 0.78rem;
+	}
+
+	.gallery-meta-icon {
+		font-size: 1rem;
+	}
+
+	.gallery-card h2 {
+		margin-top: 0.7rem;
+		color: rgba(255, 255, 255, 0.96);
+		font-size: 1.25rem;
+		font-weight: 850;
+		line-height: 1.35;
+		letter-spacing: 0;
+	}
+
+	.gallery-card p {
+		margin-top: 0.55rem;
+		color: rgba(237, 247, 255, 0.72);
+		font-size: 0.94rem;
+		line-height: 1.65;
+	}
+
+	.gallery-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		margin-top: 1rem;
+	}
+
+	.gallery-tags span {
+		border: 1px solid rgba(184, 226, 255, 0.24);
+		border-radius: 999px;
+		padding: 0.28rem 0.62rem;
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(238, 248, 255, 0.78);
+		font-size: 0.78rem;
+	}
+
+	@media (max-width: 640px) {
+		.gallery-page,
+		.gallery-card {
+			border-radius: 1rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.gallery-card,
+		.gallery-cover img {
+			transition: none;
+		}
+
+		.gallery-card:hover {
+			transform: none;
+		}
+	}
+</style>

@@ -1,0 +1,515 @@
+---
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { Icon } from "astro-icon/components";
+
+import { galleries, type Gallery } from "../../data/galleries";
+
+export const prerender = true;
+
+export const getStaticPaths = () =>
+	galleries.map((gallery) => ({
+		params: { slug: gallery.slug },
+		props: { gallery },
+	}));
+
+interface Props {
+	gallery: Gallery;
+}
+
+const { gallery } = Astro.props;
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+	year: "numeric",
+	month: "long",
+	day: "numeric",
+});
+
+const formattedDate = dateFormatter.format(new Date(gallery.date));
+---
+
+<MainGridLayout
+	title={`${gallery.title} - 图库`}
+	description={gallery.description}
+>
+	<article class="gallery-detail" aria-labelledby="gallery-detail-title">
+		<header class="gallery-detail-hero">
+			<a class="gallery-back-link" href="/gallery/">
+				<Icon
+					name="material-symbols:arrow-back"
+					class="gallery-back-icon"
+				/>
+				返回图库
+			</a>
+			<p class="gallery-kicker">Photo Album</p>
+			<h1 id="gallery-detail-title">{gallery.title}</h1>
+			<p class="gallery-description">{gallery.description}</p>
+			<div class="gallery-info">
+				<span>
+					<Icon
+						name="material-symbols:location-on"
+						class="gallery-info-icon"
+					/>
+					{gallery.location}
+				</span>
+				<span>
+					<Icon
+						name="material-symbols:calendar-today"
+						class="gallery-info-icon"
+					/>
+					{formattedDate}
+				</span>
+			</div>
+			<div class="gallery-tags">
+				{gallery.tags.map((tag) => <span>{tag}</span>)}
+			</div>
+		</header>
+
+		<div class="photo-grid" aria-label={`${gallery.title} 图片列表`}>
+			{
+				gallery.photos.map((photo, index) => (
+					<figure class="photo-card">
+						<button
+							class="photo-button"
+							type="button"
+							data-lightbox-src={photo.src}
+							data-lightbox-alt={photo.alt}
+							data-lightbox-caption={photo.caption}
+							data-lightbox-camera={photo.camera ?? ""}
+							aria-label={`放大查看：${photo.alt}`}
+						>
+							<div class="photo-fallback" hidden>
+								<Icon
+									name="material-symbols:hide-image-outline"
+									class="photo-fallback-icon"
+								/>
+								<span>请添加图片 {index + 1}</span>
+							</div>
+							<img
+								src={photo.src}
+								alt={photo.alt}
+								loading="lazy"
+								decoding="async"
+								data-gallery-image
+							/>
+						</button>
+						<figcaption>
+							<span>{photo.caption}</span>
+							{photo.camera && <em>{photo.camera}</em>}
+						</figcaption>
+					</figure>
+				))
+			}
+		</div>
+	</article>
+
+	<div class="gallery-lightbox" data-gallery-lightbox hidden>
+		<button
+			class="gallery-lightbox-close"
+			type="button"
+			aria-label="关闭图片预览"
+			data-lightbox-close
+		>
+			<Icon
+				name="material-symbols:close"
+				class="gallery-lightbox-close-icon"
+			/>
+		</button>
+		<img alt="" data-lightbox-image />
+		<div class="gallery-lightbox-caption">
+			<p data-lightbox-caption></p>
+			<span data-lightbox-camera></span>
+		</div>
+	</div>
+
+	<script>
+		const initGalleryDetail = () => {
+			document
+				.querySelectorAll<HTMLImageElement>("[data-gallery-image]")
+				.forEach((image) => {
+					const fallback = image.previousElementSibling;
+					const showFallback = () => {
+						image.hidden = true;
+						if (fallback instanceof HTMLElement) {
+							fallback.hidden = false;
+						}
+					};
+
+					image.addEventListener("error", showFallback, {
+						once: true,
+					});
+
+					if (image.complete && image.naturalWidth === 0) {
+						showFallback();
+					}
+				});
+
+			const lightbox = document.querySelector<HTMLElement>(
+				"[data-gallery-lightbox]",
+			);
+			const lightboxImage = document.querySelector<HTMLImageElement>(
+				"[data-lightbox-image]",
+			);
+			const lightboxCaption = document.querySelector<HTMLElement>(
+				"[data-lightbox-caption]",
+			);
+			const lightboxCamera = document.querySelector<HTMLElement>(
+				"[data-lightbox-camera]",
+			);
+			const closeButton = document.querySelector<HTMLButtonElement>(
+				"[data-lightbox-close]",
+			);
+
+			if (!lightbox || !lightboxImage || !lightboxCaption) {
+				return;
+			}
+
+			const closeLightbox = () => {
+				lightbox.hidden = true;
+				lightboxImage.removeAttribute("src");
+				document.documentElement.classList.remove(
+					"gallery-lightbox-open",
+				);
+			};
+
+			document
+				.querySelectorAll<HTMLButtonElement>("[data-lightbox-src]")
+				.forEach((button) => {
+					button.onclick = () => {
+						const src = button.dataset.lightboxSrc;
+						if (!src) {
+							return;
+						}
+
+						lightboxImage.src = src;
+						lightboxImage.alt = button.dataset.lightboxAlt ?? "";
+						lightboxCaption.textContent =
+							button.dataset.lightboxCaption ?? "";
+
+						if (lightboxCamera) {
+							lightboxCamera.textContent =
+								button.dataset.lightboxCamera ?? "";
+							lightboxCamera.hidden =
+								!button.dataset.lightboxCamera;
+						}
+
+						lightbox.hidden = false;
+						document.documentElement.classList.add(
+							"gallery-lightbox-open",
+						);
+					};
+				});
+
+			closeButton?.addEventListener("click", closeLightbox);
+			lightbox.onclick = (event) => {
+				if (event.target === lightbox) {
+					closeLightbox();
+				}
+			};
+			document.addEventListener("keydown", (event) => {
+				if (event.key === "Escape" && !lightbox.hidden) {
+					closeLightbox();
+				}
+			});
+		};
+
+		if (document.readyState === "loading") {
+			document.addEventListener("DOMContentLoaded", initGalleryDetail, {
+				once: true,
+			});
+		} else {
+			initGalleryDetail();
+		}
+
+		document.addEventListener("astro:page-load", initGalleryDetail);
+	</script>
+</MainGridLayout>
+
+<style>
+	.gallery-detail {
+		position: relative;
+		isolation: isolate;
+		overflow: hidden;
+		border-radius: var(--radius-large);
+		padding: clamp(1.25rem, 4vw, 2.5rem);
+		background:
+			radial-gradient(
+				circle at 12% 8%,
+				rgba(124, 214, 255, 0.24),
+				transparent 28rem
+			),
+			radial-gradient(
+				circle at 86% 16%,
+				rgba(255, 155, 218, 0.16),
+				transparent 26rem
+			),
+			linear-gradient(
+				145deg,
+				rgba(11, 16, 36, 0.8),
+				rgba(20, 22, 48, 0.54)
+			);
+		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24);
+		color: rgba(255, 255, 255, 0.92);
+		backdrop-filter: blur(18px) saturate(1.2);
+		-webkit-backdrop-filter: blur(18px) saturate(1.2);
+	}
+
+	.gallery-detail-hero {
+		max-width: 48rem;
+		margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+	}
+
+	.gallery-back-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-bottom: 1.2rem;
+		border: 1px solid rgba(188, 226, 255, 0.22);
+		border-radius: 999px;
+		padding: 0.45rem 0.78rem;
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(236, 248, 255, 0.78);
+		font-size: 0.86rem;
+		transition:
+			transform 180ms ease,
+			border-color 180ms ease,
+			background 180ms ease;
+	}
+
+	.gallery-back-link:hover {
+		border-color: rgba(188, 226, 255, 0.5);
+		background: rgba(255, 255, 255, 0.13);
+		transform: translateX(-2px);
+	}
+
+	.gallery-back-icon {
+		font-size: 1rem;
+	}
+
+	.gallery-kicker {
+		margin-bottom: 0.65rem;
+		color: rgba(190, 229, 255, 0.74);
+		font-size: 0.78rem;
+		font-weight: 800;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+	}
+
+	.gallery-detail h1 {
+		font-size: clamp(2.2rem, 7vw, 4.5rem);
+		font-weight: 900;
+		line-height: 1.03;
+		letter-spacing: 0;
+		background: linear-gradient(120deg, #fff, #bfe8ff 48%, #ffd3ef);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	.gallery-description {
+		margin-top: 1rem;
+		color: rgba(239, 247, 255, 0.76);
+		font-size: 1rem;
+		line-height: 1.8;
+	}
+
+	.gallery-info {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.7rem 1rem;
+		margin-top: 1.15rem;
+		color: rgba(213, 237, 255, 0.72);
+		font-size: 0.92rem;
+	}
+
+	.gallery-info span {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.gallery-info-icon {
+		font-size: 1.1rem;
+	}
+
+	.gallery-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		margin-top: 1rem;
+	}
+
+	.gallery-tags span {
+		border: 1px solid rgba(184, 226, 255, 0.24);
+		border-radius: 999px;
+		padding: 0.28rem 0.62rem;
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(238, 248, 255, 0.78);
+		font-size: 0.78rem;
+	}
+
+	.photo-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1rem;
+		align-items: start;
+	}
+
+	.photo-card {
+		overflow: hidden;
+		border: 1px solid rgba(204, 230, 255, 0.16);
+		border-radius: 1rem;
+		background:
+			linear-gradient(
+				135deg,
+				rgba(255, 255, 255, 0.14),
+				rgba(255, 255, 255, 0.055)
+			),
+			rgba(8, 12, 28, 0.42);
+		box-shadow:
+			0 16px 42px rgba(0, 0, 0, 0.23),
+			inset 0 1px 0 rgba(255, 255, 255, 0.14);
+		backdrop-filter: blur(18px) saturate(1.3);
+		-webkit-backdrop-filter: blur(18px) saturate(1.3);
+	}
+
+	.photo-button {
+		position: relative;
+		display: block;
+		width: 100%;
+		aspect-ratio: 4 / 3;
+		overflow: hidden;
+		background:
+			linear-gradient(135deg, rgba(123, 205, 255, 0.18), transparent),
+			rgba(255, 255, 255, 0.07);
+		cursor: zoom-in;
+	}
+
+	.photo-button img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transition:
+			transform 300ms ease,
+			filter 300ms ease;
+	}
+
+	.photo-card:hover .photo-button img {
+		filter: brightness(1.05);
+		transform: scale(1.045);
+	}
+
+	.photo-fallback {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		align-content: center;
+		gap: 0.6rem;
+		color: rgba(229, 244, 255, 0.76);
+		font-size: 0.9rem;
+	}
+
+	.photo-fallback-icon {
+		font-size: 2rem;
+		color: rgba(204, 233, 255, 0.82);
+	}
+
+	.photo-card figcaption {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		padding: 0.85rem 0.95rem 1rem;
+		color: rgba(238, 248, 255, 0.74);
+		font-size: 0.92rem;
+		line-height: 1.6;
+	}
+
+	.photo-card figcaption em {
+		color: rgba(202, 230, 255, 0.56);
+		font-size: 0.78rem;
+		font-style: normal;
+	}
+
+	.gallery-lightbox {
+		position: fixed;
+		inset: 0;
+		z-index: 1000;
+		display: grid;
+		place-items: center;
+		padding: 1rem;
+		background: rgba(3, 5, 14, 0.78);
+		backdrop-filter: blur(18px);
+		-webkit-backdrop-filter: blur(18px);
+	}
+
+	.gallery-lightbox[hidden] {
+		display: none;
+	}
+
+	.gallery-lightbox img {
+		max-width: min(92vw, 72rem);
+		max-height: 78vh;
+		border-radius: 1rem;
+		object-fit: contain;
+		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+	}
+
+	.gallery-lightbox-close {
+		position: fixed;
+		top: 1rem;
+		right: 1rem;
+		display: grid;
+		width: 2.75rem;
+		height: 2.75rem;
+		place-items: center;
+		border: 1px solid rgba(217, 239, 255, 0.2);
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.1);
+		color: white;
+	}
+
+	.gallery-lightbox-close-icon {
+		font-size: 1.35rem;
+	}
+
+	.gallery-lightbox-caption {
+		max-width: min(92vw, 48rem);
+		margin-top: 1rem;
+		text-align: center;
+		color: rgba(242, 249, 255, 0.86);
+	}
+
+	.gallery-lightbox-caption span {
+		display: block;
+		margin-top: 0.35rem;
+		color: rgba(205, 232, 255, 0.58);
+		font-size: 0.82rem;
+	}
+
+	@media (min-width: 720px) {
+		.photo-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 1180px) {
+		.photo-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 640px) {
+		.gallery-detail,
+		.photo-card,
+		.gallery-lightbox img {
+			border-radius: 1rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.gallery-back-link,
+		.photo-button img {
+			transition: none;
+		}
+	}
+</style>

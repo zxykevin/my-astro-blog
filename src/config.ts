@@ -285,6 +285,11 @@ export const navBarConfig: NavBarConfig = {
 			icon: "material-symbols:terminal",
 		},
 		{
+			name: "图库",
+			url: "/gallery/",
+			icon: "material-symbols:photo-library",
+		},
+		{
 			name: "关于我",
 			url: "/about/",
 			icon: "material-symbols:person",
