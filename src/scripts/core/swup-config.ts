@@ -189,11 +189,6 @@ export interface FancyboxConfig {
 		minScale: number;
 	};
 	caption: boolean;
-	fadeEffect: boolean;
-	zoomEffect: boolean;
-	showClass: string | false;
-	hideClass: string | false;
-	on: Record<string, (...args: any[]) => void>;
 }
 
 // 默认 Fancybox 配置
@@ -232,11 +227,6 @@ export const getDefaultFancyboxConfig = (): FancyboxConfig => ({
 	infinite: true,
 	Panzoom: { maxScale: 3, minScale: 1 },
 	caption: false,
-	fadeEffect: true,
-	zoomEffect: false,
-	showClass: "fancybox-fade-in",
-	hideClass: "fancybox-fade-out",
-	on: {},
 });
 
 // Fancybox 选择器

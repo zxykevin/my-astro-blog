@@ -30,19 +30,6 @@ import { parseDirectiveNode } from "./src/plugins/remark-directive-rehype.js";
 import { remarkFixGithubAdmonitions } from "./src/plugins/remark-fix-github-admonitions.js";
 import { remarkMermaid } from "./src/plugins/remark-mermaid.js";
 
-const imageLinkPattern = /\.(?:jpe?g|png|webp|avif|gif)(?:[?#].*)?$/i;
-
-const shouldIgnoreSwupVisit = (url, { el } = {}) => {
-	const link = el?.closest?.("a");
-	const href = link?.getAttribute?.("href") || url || "";
-
-	return (
-		link?.hasAttribute?.("data-no-swup") ||
-		link?.hasAttribute?.("data-fancybox") ||
-		imageLinkPattern.test(href)
-	);
-};
-
 // https://astro.build/config
 export default defineConfig({
 	site: siteConfig.siteURL,
@@ -63,9 +50,6 @@ export default defineConfig({
 			cache: true,
 			preload: false, // 禁用预加载以提升性能
 			accessibility: true,
-			linkSelector:
-				'a[href]:not([data-no-swup]):not([data-fancybox]):not([href$=".jpg"]):not([href$=".jpeg"]):not([href$=".png"]):not([href$=".webp"]):not([href$=".avif"]):not([href$=".gif"])',
-			ignoreVisit: shouldIgnoreSwupVisit,
 			updateHead: process.env.NODE_ENV === "production",
 			updateBodyClass: false,
 			globalInstance: true,
