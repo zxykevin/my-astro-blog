@@ -1,3 +1,12 @@
+/sitemap-index.xml
+  Content-Type: application/xml; charset=utf-8
+
+/sitemap-0.xml
+  Content-Type: application/xml; charset=utf-8
+
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+
 /atom.xml
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET
