@@ -78,6 +78,9 @@ export class FancyboxHandler {
 		// 绑定相册/文章图片
 		this.Fancybox.bind(FANCYBOX_SELECTORS.albumImages, {
 			...commonConfig,
+			source: (el: HTMLImageElement) => {
+				return el.currentSrc || el.getAttribute("src");
+			},
 			groupAll: true,
 			Carousel: {
 				transition: "slide",
