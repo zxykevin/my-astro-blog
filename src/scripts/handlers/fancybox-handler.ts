@@ -25,13 +25,6 @@ export class FancyboxHandler {
 	 * 按需加载 Fancybox 模块和样式
 	 */
 	async init(): Promise<void> {
-		if (this.shouldDisableOnIPhone()) {
-			this.cleanup();
-			this.disableIPhoneTriggers();
-			this.initialized = false;
-			return;
-		}
-
 		const hasImages = this.checkForImages();
 
 		if (!hasImages) {
@@ -63,25 +56,54 @@ export class FancyboxHandler {
 		);
 	}
 
-	private shouldDisableOnIPhone(): boolean {
-		const isIPhone = /iPhone/.test(navigator.userAgent);
-		const { pathname } = window.location;
+	private normalizeLightboxSources(): void {
+		document
+			.querySelectorAll<HTMLImageElement>(".custom-md img, #post-cover img")
+			.forEach((img) => {
+				const source = this.getOptimizedImageSource(img);
+				if (source) {
+					img.setAttribute("data-src", source);
+				}
+			});
 
-		return (
-			isIPhone &&
-			(pathname.startsWith("/posts/") || pathname.startsWith("/gallery/"))
-		);
-	}
-
-	private disableIPhoneTriggers(): void {
 		document
 			.querySelectorAll<HTMLElement>("[data-fancybox]")
 			.forEach((element) => {
-				element.setAttribute("aria-disabled", "true");
-				if (element instanceof HTMLButtonElement) {
-					element.disabled = true;
+				const image = element.querySelector("img");
+				const currentSource = element.getAttribute("data-src");
+				const optimizedSource = image
+					? this.getOptimizedImageSource(image)
+					: null;
+
+				if (
+					optimizedSource &&
+					(!currentSource || this.isOriginalImageSource(currentSource))
+				) {
+					element.setAttribute("data-src", optimizedSource);
 				}
 			});
+	}
+
+	private getOptimizedImageSource(img: HTMLImageElement): string | null {
+		return this.getMappedLightboxSource(
+			img.currentSrc || img.getAttribute("src"),
+		);
+	}
+
+	private isOriginalImageSource(src: string): boolean {
+		return !src.includes("/_astro/");
+	}
+
+	private getMappedLightboxSource(src: string | null): string | null {
+		if (!src) {
+			return null;
+		}
+
+		const imageMap = (window as any).__mizukiLightboxImageMap as
+			| Record<string, string>
+			| undefined;
+
+		return imageMap?.[src] || src;
 	}
 
 	/**
@@ -102,12 +124,13 @@ export class FancyboxHandler {
 		}
 
 		const commonConfig = getDefaultFancyboxConfig();
+		this.normalizeLightboxSources();
 
 		// 绑定相册/文章图片
 		this.Fancybox.bind(FANCYBOX_SELECTORS.albumImages, {
 			...commonConfig,
 			source: (el: HTMLImageElement) => {
-				return el.currentSrc || el.getAttribute("src");
+				return el.getAttribute("data-src") || this.getOptimizedImageSource(el);
 			},
 			groupAll: true,
 			Carousel: {
