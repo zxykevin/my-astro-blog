@@ -50,6 +50,8 @@ export default defineConfig({
 			cache: true,
 			preload: false, // 禁用预加载以提升性能
 			accessibility: true,
+			linkSelector:
+				'a[href]:not([data-no-swup]):not([data-fancybox]):not([href$=".jpg"]):not([href$=".jpeg"]):not([href$=".png"]):not([href$=".webp"]):not([href$=".avif"]):not([href$=".gif"])',
 			updateHead: process.env.NODE_ENV === "production",
 			updateBodyClass: false,
 			globalInstance: true,
