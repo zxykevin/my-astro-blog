@@ -45,7 +45,8 @@ const iconSrc = rawIcon?.match(/^(http|https|\/\/)/) ? rawIcon : rawIcon ? url(r
 const isLogoExternal = rawLogo?.match(/^(http|https|\/\/)/);
 const isIconExternal = rawIcon?.match(/^(http|https|\/\/)/);
 const hasLogoPngFallback = rawLogo?.endsWith(".png") && !isLogoExternal;
-const hasIconPngFallback = rawIcon?.endsWith(".png") && !isIconExternal;
+const hasIconPngFallback =
+	rawIcon?.endsWith(".png") && !isIconExternal && rawIcon !== "/favicon.png";
 const logoWebpSrc = hasLogoPngFallback ? logoSrc.replace(/\.png$/i, ".webp") : logoSrc;
 const iconWebpSrc = hasIconPngFallback ? iconSrc.replace(/\.png$/i, ".webp") : iconSrc;
 ---
