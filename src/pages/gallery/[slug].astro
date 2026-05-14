@@ -1,6 +1,6 @@
 ---
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getImage, Image } from "astro:assets";
+import { getImage } from "astro:assets";
 import { Icon } from "astro-icon/components";
 
 import { galleries, type Gallery } from "../../data/galleries";
@@ -28,9 +28,9 @@ const formattedDate = dateFormatter.format(new Date(gallery.date));
 const optimizedPhotos = await Promise.all(
 	gallery.photos.map(async (photo) => ({
 		...photo,
-		lightbox: await getImage({
+		preview: await getImage({
 			src: photo.src,
-			width: 1600,
+			width: 640,
 			format: "webp",
 			quality: 80,
 		}),
@@ -84,18 +84,16 @@ const optimizedPhotos = await Promise.all(
 							type="button"
 							data-fancybox={`gallery-${gallery.slug}`}
 							data-fancybox-no-hash
-							data-src={photo.lightbox.src}
+							data-src={photo.preview.src}
 							data-type="image"
 							data-caption={photo.caption}
 							aria-label={`放大查看：${photo.alt}`}
 						>
-							<Image
-								src={photo.src}
+							<img
+								src={photo.preview.src}
 								alt={photo.alt}
-								widths={[520, 800, 1200, 1600]}
-								sizes="(max-width: 719px) 92vw, (max-width: 1179px) 44vw, 30vw"
-								format="webp"
-								quality={80}
+								width={photo.preview.attributes.width}
+								height={photo.preview.attributes.height}
 								loading="lazy"
 								decoding="async"
 							/>

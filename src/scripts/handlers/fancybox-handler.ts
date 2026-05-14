@@ -154,8 +154,12 @@ export class FancyboxHandler {
 		this.Fancybox.bind(FANCYBOX_SELECTORS.galleryImages, {
 			...commonConfig,
 			Hash: false,
+			preload: 0,
 			source: (el: HTMLElement) => {
 				return el.getAttribute("data-src");
+			},
+			Carousel: {
+				preload: 0,
 			},
 		});
 		this.boundSelectors.push(FANCYBOX_SELECTORS.galleryImages);
