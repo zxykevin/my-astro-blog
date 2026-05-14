@@ -14,6 +14,13 @@ export const friends: Friend[] = [
 		url: "https://www.xinghuisama.top",
 		status: "online",
 	},
+	{
+		name: "Moca",
+		avatar: "https://blog.gonelove.de/avatar.webp",
+		description: "Gone_Love 的个人博客",
+		url: "https://blog.gonelove.de",
+		status: "friend",
+	},
 ];
 
 export interface FriendItem {
