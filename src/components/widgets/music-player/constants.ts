@@ -18,7 +18,7 @@ export const LOCAL_PLAYLIST: Song[] = [
 export const DEFAULT_SONG: Song = {
 	title: "Sample Song",
 	artist: "Sample Artist",
-	cover: "/favicon.webp",
+	cover: "/favicon-v3.webp",
 	url: "",
 	duration: 0,
 	id: 0,
