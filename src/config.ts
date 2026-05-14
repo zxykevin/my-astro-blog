@@ -57,7 +57,7 @@ export const siteConfig: SiteConfig = {
 		// 顶栏标题文本
 		text: "星轨手札",
 		// 顶栏标题图标路径
-		icon: "/assets/home/home.webp",
+		icon: "/assets/home/home-v2.webp",
 		// 网站Logo图片路径
 		logo: "assets/home/default-logo.webp",
 	},
