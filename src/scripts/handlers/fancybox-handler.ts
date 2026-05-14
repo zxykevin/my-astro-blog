@@ -52,6 +52,7 @@ export class FancyboxHandler {
 		return (
 			document.querySelector(FANCYBOX_SELECTORS.albumImages) !== null ||
 			document.querySelector(FANCYBOX_SELECTORS.albumLinks) !== null ||
+			document.querySelector(FANCYBOX_SELECTORS.galleryImages) !== null ||
 			document.querySelector(FANCYBOX_SELECTORS.singleFancybox) !== null
 		);
 	}
@@ -148,6 +149,16 @@ export class FancyboxHandler {
 			},
 		});
 		this.boundSelectors.push(FANCYBOX_SELECTORS.albumLinks);
+
+		// Bind gallery page images without URL hash updates.
+		this.Fancybox.bind(FANCYBOX_SELECTORS.galleryImages, {
+			...commonConfig,
+			Hash: false,
+			source: (el: HTMLElement) => {
+				return el.getAttribute("data-src");
+			},
+		});
+		this.boundSelectors.push(FANCYBOX_SELECTORS.galleryImages);
 
 		// 绑定单独的 fancybox 图片
 		this.Fancybox.bind(FANCYBOX_SELECTORS.singleFancybox, commonConfig);

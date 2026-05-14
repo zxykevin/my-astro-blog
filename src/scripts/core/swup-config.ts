@@ -237,6 +237,10 @@ export const FANCYBOX_SELECTORS = {
 	// 相册链接
 	albumLinks: ".moment-images a[data-fancybox]",
 
+	// Gallery page images
+	galleryImages: "[data-fancybox][data-fancybox-no-hash]",
+
 	// 单独的 fancybox 图片
-	singleFancybox: "[data-fancybox]:not(.moment-images a)",
+	singleFancybox:
+		"[data-fancybox]:not(.moment-images a):not([data-fancybox-no-hash])",
 } as const;
