@@ -27,12 +27,22 @@ function text(value) {
 }
 
 function run(command, args, options = {}) {
-	return execFileSync(command, args, {
+	const output = execFileSync(command, args, {
 		cwd: root,
 		encoding: "utf8",
 		stdio: options.stdio || ["ignore", "pipe", "pipe"],
 		...options,
-	}).trim();
+	});
+
+	if (typeof output === "string") {
+		return output.trim();
+	}
+
+	if (output == null) {
+		return "";
+	}
+
+	return String(output).trim();
 }
 
 async function githubRequest(pathname, options = {}) {
