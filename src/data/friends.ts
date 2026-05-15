@@ -28,6 +28,13 @@ export const friends: Friend[] = [
 		url: "https://blog.lqay.cn/",
 		status: "friend",
 	},
+	{
+		name: "MmzMing的知识库",
+		avatar: "https://i.stardots.io/784774835/StarDots-2026051117505284739.webp",
+		description: "哈基米，南北绿豆",
+		url: "https://tblog.mmzhiku.xyz/",
+		status: "friend",
+	},
 ];
 
 export interface FriendItem {
