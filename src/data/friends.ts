@@ -21,6 +21,13 @@ export const friends: Friend[] = [
 		url: "https://blog.gonelove.de",
 		status: "friend",
 	},
+	{
+		name: "流欺の博客",
+		avatar: "https://tc.lqay.cn/LightPicture/2026/03/5f64e0f0f361e19c.png",
+		description: "嗯对就是个博客",
+		url: "https://blog.lqay.cn/",
+		status: "friend",
+	},
 ];
 
 export interface FriendItem {

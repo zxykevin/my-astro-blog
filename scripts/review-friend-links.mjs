@@ -7,6 +7,13 @@ const repo = process.env.GITHUB_REPOSITORY || "zxykevin/my-astro-blog";
 const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
 const root = process.cwd();
 const friendsPath = path.join(root, "src", "data", "friends.ts");
+const prettierPath = path.join(
+	root,
+	"node_modules",
+	"prettier",
+	"bin",
+	"prettier.cjs",
+);
 
 const labels = {
 	name: "\u7f51\u7ad9\u540d\u79f0",
@@ -46,21 +53,17 @@ function run(command, args, options = {}) {
 }
 
 async function githubRequest(pathname, options = {}) {
-	if (!githubToken) {
-		throw new Error(
-			text(
-				"\u7f3a\u5c11 GITHUB_TOKEN \u6216 GH_TOKEN\uff0c\u65e0\u6cd5\u8bfb\u53d6\u548c\u66f4\u65b0 GitHub issue",
-			),
-		);
-	}
-
 	const response = await fetch(`https://api.github.com${pathname}`, {
 		...options,
 		headers: {
 			accept: "application/vnd.github+json",
-			authorization: `Bearer ${githubToken}`,
 			"user-agent": "Mizuki friend-link reviewer",
 			"x-github-api-version": "2022-11-28",
+			...(githubToken
+				? {
+						authorization: `Bearer ${githubToken}`,
+					}
+				: {}),
 			...(options.headers || {}),
 		},
 	});
@@ -187,12 +190,26 @@ function gitHasChanges() {
 }
 
 async function listFriendIssues() {
-	return githubRequest(
-		`/repos/${repo}/issues?state=open&labels=friend-link&per_page=100`,
+	const issues = await githubRequest(
+		`/repos/${repo}/issues?state=open&per_page=100`,
 	);
+
+	return issues.filter((issue) => {
+		const hasFriendLinkLabel = issue.labels?.some(
+			(label) => label.name === "friend-link",
+		);
+		return hasFriendLinkLabel || issue.title?.startsWith("[New Friend]");
+	});
 }
 
 async function commentIssue(issueNumber, body) {
+	if (!githubToken) {
+		console.warn(
+			`Skip commenting on issue #${issueNumber}: missing GITHUB_TOKEN or GH_TOKEN.`,
+		);
+		return;
+	}
+
 	await githubRequest(`/repos/${repo}/issues/${issueNumber}/comments`, {
 		method: "POST",
 		body: JSON.stringify({ body }),
@@ -200,6 +217,13 @@ async function commentIssue(issueNumber, body) {
 }
 
 async function closeIssue(issueNumber) {
+	if (!githubToken) {
+		console.warn(
+			`Skip closing issue #${issueNumber}: missing GITHUB_TOKEN or GH_TOKEN.`,
+		);
+		return;
+	}
+
 	await githubRequest(`/repos/${repo}/issues/${issueNumber}`, {
 		method: "PATCH",
 		body: JSON.stringify({
@@ -210,6 +234,13 @@ async function closeIssue(issueNumber) {
 }
 
 async function addIssueLabel(issueNumber, label) {
+	if (!githubToken) {
+		console.warn(
+			`Skip labeling issue #${issueNumber}: missing GITHUB_TOKEN or GH_TOKEN.`,
+		);
+		return;
+	}
+
 	await githubRequest(`/repos/${repo}/issues/${issueNumber}/labels`, {
 		method: "POST",
 		body: JSON.stringify({ labels: [label] }),
@@ -246,7 +277,7 @@ async function reviewIssue(issue) {
 	}
 
 	fs.writeFileSync(friendsPath, appendFriend(current, friend), "utf8");
-	run("pnpm", ["prettier", "--write", "src/data/friends.ts"], {
+	run(process.execPath, [prettierPath, "--write", "src/data/friends.ts"], {
 		stdio: "inherit",
 	});
 
@@ -267,7 +298,13 @@ async function reviewIssue(issue) {
 }
 
 async function main() {
-	run("git", ["pull", "--ff-only"], { stdio: "inherit" });
+	try {
+		run("git", ["pull", "--ff-only"], { stdio: "inherit" });
+	} catch {
+		console.warn(
+			"git pull --ff-only failed; continuing with current checkout.",
+		);
+	}
 
 	const issues = await listFriendIssues();
 	if (issues.length === 0) {
@@ -275,17 +312,17 @@ async function main() {
 		return;
 	}
 
+	if (gitHasChanges()) {
+		throw new Error(
+			text(
+				"src/data/friends.ts \u6709\u672a\u63d0\u4ea4\u6539\u52a8\uff0c\u505c\u6b62\u81ea\u52a8\u5ba1\u6838\u3002",
+			),
+		);
+	}
+
 	for (const issue of issues) {
 		if (issue.pull_request) {
 			continue;
-		}
-
-		if (gitHasChanges()) {
-			throw new Error(
-				text(
-					"src/data/friends.ts \u6709\u672a\u63d0\u4ea4\u6539\u52a8\uff0c\u505c\u6b62\u81ea\u52a8\u5ba1\u6838\u3002",
-				),
-			);
 		}
 
 		try {
