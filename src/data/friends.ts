@@ -19,21 +19,21 @@ export const friends: Friend[] = [
 		avatar: "https://blog.gonelove.de/avatar.webp",
 		description: "Gone_Love 的个人博客",
 		url: "https://blog.gonelove.de",
-		status: "friend",
+		status: "online",
 	},
 	{
 		name: "流欺の博客",
 		avatar: "https://tc.lqay.cn/LightPicture/2026/03/5f64e0f0f361e19c.png",
 		description: "嗯对就是个博客",
 		url: "https://blog.lqay.cn/",
-		status: "friend",
+		status: "online",
 	},
 	{
 		name: "MmzMing的知识库",
 		avatar: "https://i.stardots.io/784774835/StarDots-2026051117505284739.webp",
 		description: "哈基米，南北绿豆",
 		url: "https://tblog.mmzhiku.xyz/",
-		status: "friend",
+		status: "online",
 	},
 ];
 
