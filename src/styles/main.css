@@ -369,13 +369,6 @@ body {
     @apply bg-(--card-bg-transparent) backdrop-blur-sm;
   }
 
-  /* Keep the immersive wallpaper visible when fullscreen mode is active. */
-  body.enable-banner.lg\:is-home #swup-container,
-  body.wallpaper-transparent #swup-container,
-  .wallpaper-transparent #swup-container {
-    background: transparent !important;
-  }
-
   html:has(body.wallpaper-transparent),
   body.wallpaper-transparent {
     background-color: transparent;
