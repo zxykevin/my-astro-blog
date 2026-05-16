@@ -1,0 +1,622 @@
+---
+const API_BASE_URL =
+	import.meta.env.PUBLIC_COMMENTS_API_BASE_URL ??
+	"https://comments.yuulog.org";
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
+---
+
+<section
+	class="comment-box card-base-transparent mb-4 p-4 md:p-6"
+	data-comment-box
+	data-api-base-url={API_BASE_URL}
+	data-turnstile-site-key={TURNSTILE_SITE_KEY}
+	aria-label="评论区"
+>
+	<div class="comment-box-header">
+		<h2>评论</h2>
+		<span data-comment-count aria-live="polite"></span>
+	</div>
+
+	<div class="comment-list" data-comment-list aria-live="polite">
+		<p class="comment-state">评论加载中...</p>
+	</div>
+
+	<form class="comment-form" data-comment-form novalidate>
+		<div class="comment-form-grid">
+			<label>
+				<span>昵称</span>
+				<input name="nickname" type="text" required maxlength="80" />
+			</label>
+			<label>
+				<span>邮箱</span>
+				<input name="email" type="email" maxlength="160" />
+			</label>
+			<label>
+				<span>网站</span>
+				<input
+					name="website"
+					type="url"
+					placeholder="https://example.com"
+					maxlength="240"
+				/>
+			</label>
+		</div>
+
+		<label>
+			<span>评论内容</span>
+			<textarea name="content" required rows="5" maxlength="2000"
+			></textarea>
+		</label>
+
+		<div class="comment-turnstile" data-turnstile-slot hidden></div>
+
+		<div class="comment-form-footer">
+			<p
+				class="comment-feedback"
+				data-comment-feedback
+				aria-live="polite"
+			>
+			</p>
+			<button type="submit" data-submit-button>提交评论</button>
+		</div>
+	</form>
+</section>
+
+<script>
+	type Comment = {
+		id: string;
+		pagePath: string;
+		parentId: string | null;
+		nickname: string;
+		website: string | null;
+		content: string;
+		createdAt: string;
+	};
+
+	type CommentsResponse = {
+		ok: boolean;
+		comments?: Comment[];
+		message?: string;
+	};
+
+	type SubmitResponse = {
+		ok: boolean;
+		status?: string;
+		message?: string;
+	};
+
+	type CommentBoxElement = HTMLElement & {
+		dataset: DOMStringMap & {
+			commentReady?: string;
+			apiBaseUrl?: string;
+			turnstileSiteKey?: string;
+		};
+		__turnstileToken?: string;
+		__turnstileWidgetId?: string;
+	};
+
+	type TurnstileApi = {
+		render: (
+			container: HTMLElement,
+			options: {
+				sitekey: string;
+				callback: (token: string) => void;
+				"expired-callback": () => void;
+				"error-callback": () => void;
+			},
+		) => string;
+		reset: (widgetId?: string) => void;
+	};
+
+	type TurnstileWindow = Window &
+		typeof globalThis & {
+			turnstile?: TurnstileApi;
+			__mizukiTurnstileLoader?: Promise<TurnstileApi>;
+		};
+
+	function isHttpWebsite(value: string) {
+		if (!value) return true;
+		try {
+			const url = new URL(value);
+			return url.protocol === "http:" || url.protocol === "https:";
+		} catch {
+			return false;
+		}
+	}
+
+	function getSafeWebsite(value: string | null) {
+		return value && isHttpWebsite(value) ? value : null;
+	}
+
+	function formatLocalTime(value: string) {
+		const date = new Date(value);
+		return Number.isNaN(date.getTime())
+			? value
+			: date.toLocaleString(undefined, {
+					year: "numeric",
+					month: "2-digit",
+					day: "2-digit",
+					hour: "2-digit",
+					minute: "2-digit",
+				});
+	}
+
+	function getElements(root: CommentBoxElement) {
+		return {
+			list: root.querySelector<HTMLElement>("[data-comment-list]"),
+			count: root.querySelector<HTMLElement>("[data-comment-count]"),
+			form: root.querySelector<HTMLFormElement>("[data-comment-form]"),
+			feedback: root.querySelector<HTMLElement>(
+				"[data-comment-feedback]",
+			),
+			submitButton: root.querySelector<HTMLButtonElement>(
+				"[data-submit-button]",
+			),
+			turnstileSlot: root.querySelector<HTMLElement>(
+				"[data-turnstile-slot]",
+			),
+		};
+	}
+
+	function loadTurnstileScript() {
+		const turnstileWindow = window as TurnstileWindow;
+		if (turnstileWindow.turnstile) {
+			return Promise.resolve(turnstileWindow.turnstile);
+		}
+		if (turnstileWindow.__mizukiTurnstileLoader) {
+			return turnstileWindow.__mizukiTurnstileLoader;
+		}
+
+		turnstileWindow.__mizukiTurnstileLoader = new Promise(
+			(resolve, reject) => {
+				const existingScript =
+					document.querySelector<HTMLScriptElement>(
+						'script[data-turnstile-script="true"]',
+					);
+				const script =
+					existingScript ?? document.createElement("script");
+
+				const handleLoad = () => {
+					if (turnstileWindow.turnstile) {
+						resolve(turnstileWindow.turnstile);
+						return;
+					}
+					reject(new Error("Turnstile API unavailable"));
+				};
+
+				script.addEventListener("load", handleLoad, { once: true });
+				script.addEventListener(
+					"error",
+					() => reject(new Error("Turnstile script failed to load")),
+					{ once: true },
+				);
+
+				if (!existingScript) {
+					script.src =
+						"https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+					script.async = true;
+					script.defer = true;
+					script.dataset.turnstileScript = "true";
+					document.head.append(script);
+				}
+			},
+		);
+
+		return turnstileWindow.__mizukiTurnstileLoader;
+	}
+
+	function renderState(container: HTMLElement, message: string) {
+		container.replaceChildren();
+		const state = document.createElement("p");
+		state.className = "comment-state";
+		state.textContent = message;
+		container.append(state);
+	}
+
+	function renderComments(root: CommentBoxElement, comments: Comment[]) {
+		const { list, count } = getElements(root);
+		if (!list) return;
+
+		list.replaceChildren();
+		if (count)
+			count.textContent =
+				comments.length > 0 ? `${comments.length} 条` : "";
+
+		if (comments.length === 0) {
+			renderState(list, "还没有评论，来留下第一条吧。");
+			return;
+		}
+
+		for (const comment of comments) {
+			const article = document.createElement("article");
+			article.className = "comment-item";
+			article.dataset.commentId = comment.id;
+			article.dataset.parentId = comment.parentId ?? "";
+
+			const meta = document.createElement("div");
+			meta.className = "comment-meta";
+
+			const safeWebsite = getSafeWebsite(comment.website);
+			const author = safeWebsite
+				? document.createElement("a")
+				: document.createElement("span");
+			author.className = "comment-author";
+			author.textContent = comment.nickname;
+			if (author instanceof HTMLAnchorElement && safeWebsite) {
+				author.href = safeWebsite;
+				author.target = "_blank";
+				author.rel = "nofollow noopener noreferrer";
+			}
+
+			const time = document.createElement("time");
+			time.dateTime = comment.createdAt;
+			time.textContent = formatLocalTime(comment.createdAt);
+			meta.append(author, time);
+
+			const content = document.createElement("p");
+			content.className = "comment-content";
+			content.textContent = comment.content;
+
+			const actions = document.createElement("div");
+			actions.className = "comment-actions";
+			const replyButton = document.createElement("button");
+			replyButton.type = "button";
+			replyButton.disabled = true;
+			replyButton.textContent = "回复";
+			replyButton.title = "回复功能稍后开放";
+			actions.append(replyButton);
+
+			article.append(meta, content, actions);
+			list.append(article);
+		}
+	}
+
+	async function loadComments(root: CommentBoxElement) {
+		const { list } = getElements(root);
+		if (!list) return;
+
+		const pagePath = window.location.pathname;
+		const apiBaseUrl = root.dataset.apiBaseUrl ?? "";
+		renderState(list, "评论加载中...");
+
+		try {
+			const response = await fetch(
+				`${apiBaseUrl}/api/comments?path=${encodeURIComponent(pagePath)}`,
+				{ headers: { Accept: "application/json" } },
+			);
+			const data = (await response.json()) as CommentsResponse;
+			if (!response.ok || !data.ok || !Array.isArray(data.comments)) {
+				throw new Error("Failed to load comments");
+			}
+			renderComments(root, data.comments);
+		} catch {
+			renderState(list, "评论加载失败，请稍后再试。");
+		}
+	}
+
+	function resetTurnstile(root: CommentBoxElement) {
+		root.__turnstileToken = "";
+		const turnstileWindow = window as TurnstileWindow;
+		if (root.__turnstileWidgetId && turnstileWindow.turnstile) {
+			turnstileWindow.turnstile.reset(root.__turnstileWidgetId);
+		}
+	}
+
+	async function setupTurnstile(root: CommentBoxElement) {
+		const { turnstileSlot, feedback, submitButton } = getElements(root);
+		if (!turnstileSlot || !feedback || !submitButton) return;
+
+		const siteKey = root.dataset.turnstileSiteKey;
+		if (!siteKey) {
+			feedback.textContent = "评论验证未配置，暂时无法提交评论。";
+			submitButton.disabled = true;
+			return;
+		}
+
+		turnstileSlot.hidden = false;
+		try {
+			const turnstile = await loadTurnstileScript();
+			if (root.__turnstileWidgetId) return;
+
+			root.__turnstileWidgetId = turnstile.render(turnstileSlot, {
+				sitekey: siteKey,
+				callback: (token) => {
+					root.__turnstileToken = token;
+					if (feedback.textContent === "请先完成人机验证。") {
+						feedback.textContent = "";
+					}
+				},
+				"expired-callback": () => {
+					root.__turnstileToken = "";
+				},
+				"error-callback": () => {
+					root.__turnstileToken = "";
+					feedback.textContent = "人机验证加载失败，请稍后重试。";
+				},
+			});
+		} catch {
+			feedback.textContent = "人机验证加载失败，请稍后重试。";
+			submitButton.disabled = true;
+		}
+	}
+
+	function setupForm(root: CommentBoxElement) {
+		const { form, feedback, submitButton } = getElements(root);
+		if (!form || !feedback || !submitButton) return;
+
+		form.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			feedback.textContent = "";
+
+			const formData = new FormData(form);
+			const nickname = String(formData.get("nickname") ?? "").trim();
+			const email = String(formData.get("email") ?? "").trim();
+			const website = String(formData.get("website") ?? "").trim();
+			const content = String(formData.get("content") ?? "").trim();
+
+			if (!nickname || !content) {
+				feedback.textContent = "请填写昵称和评论内容。";
+				return;
+			}
+			if (!isHttpWebsite(website)) {
+				feedback.textContent =
+					"网站地址必须以 http:// 或 https:// 开头。";
+				return;
+			}
+			if (!root.__turnstileToken) {
+				feedback.textContent = "请先完成人机验证。";
+				return;
+			}
+
+			submitButton.disabled = true;
+			submitButton.textContent = "提交中...";
+
+			try {
+				const response = await fetch(
+					`${root.dataset.apiBaseUrl ?? ""}/api/comments`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Accept: "application/json",
+						},
+						body: JSON.stringify({
+							pagePath: window.location.pathname,
+							parentId: null,
+							nickname,
+							email,
+							website,
+							content,
+							turnstileToken: root.__turnstileToken,
+						}),
+					},
+				);
+				const data = (await response.json()) as SubmitResponse;
+				if (!response.ok || !data.ok) {
+					feedback.textContent =
+						data.message || "评论提交失败，请稍后再试。";
+					return;
+				}
+
+				feedback.textContent = "评论已提交，等待审核";
+				const contentField = form.elements.namedItem("content");
+				if (contentField instanceof HTMLTextAreaElement) {
+					contentField.value = "";
+				}
+			} catch {
+				feedback.textContent = "提交失败，请检查网络后重试。";
+			} finally {
+				resetTurnstile(root);
+				submitButton.disabled = false;
+				submitButton.textContent = "提交评论";
+			}
+		});
+	}
+
+	function initCommentBoxes() {
+		document
+			.querySelectorAll<CommentBoxElement>("[data-comment-box]")
+			.forEach((root) => {
+				if (root.dataset.commentReady === "true") {
+					loadComments(root);
+					return;
+				}
+				root.dataset.commentReady = "true";
+				void setupTurnstile(root);
+				setupForm(root);
+				loadComments(root);
+			});
+	}
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", initCommentBoxes, {
+			once: true,
+		});
+	} else {
+		initCommentBoxes();
+	}
+	document.addEventListener("astro:page-load", initCommentBoxes);
+	document.addEventListener("mizuki:page:loaded", initCommentBoxes);
+</script>
+
+<style>
+	.comment-box {
+		border: 1px solid color-mix(in oklab, var(--primary) 16%, transparent);
+		background:
+			linear-gradient(
+				135deg,
+				rgba(255, 255, 255, 0.55),
+				rgba(255, 255, 255, 0.28)
+			),
+			color-mix(in oklab, var(--card-bg-transparent) 92%, transparent);
+		box-shadow:
+			0 12px 30px rgba(0, 0, 0, 0.06),
+			inset 0 1px 0 rgba(255, 255, 255, 0.24);
+	}
+	:global(:root.dark) .comment-box {
+		background:
+			linear-gradient(
+				135deg,
+				rgba(255, 255, 255, 0.1),
+				rgba(255, 255, 255, 0.035)
+			),
+			color-mix(in oklab, var(--card-bg-transparent) 92%, transparent);
+		box-shadow:
+			0 16px 36px rgba(0, 0, 0, 0.24),
+			inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	}
+	.comment-box-header,
+	.comment-meta,
+	.comment-form-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+	.comment-box-header h2 {
+		font-size: 1.2rem;
+		font-weight: 700;
+		color: rgba(0, 0, 0, 0.9);
+	}
+	:global(:root.dark) .comment-box-header h2 {
+		color: rgba(255, 255, 255, 0.92);
+	}
+	.comment-box-header span,
+	.comment-state,
+	.comment-meta time,
+	.comment-feedback {
+		color: rgba(0, 0, 0, 0.52);
+		font-size: 0.875rem;
+	}
+	:global(:root.dark) .comment-box-header span,
+	:global(:root.dark) .comment-state,
+	:global(:root.dark) .comment-meta time,
+	:global(:root.dark) .comment-feedback {
+		color: rgba(255, 255, 255, 0.54);
+	}
+	.comment-list {
+		display: grid;
+		gap: 0.9rem;
+		margin-top: 1rem;
+	}
+	.comment-item {
+		display: grid;
+		gap: 0.65rem;
+		padding: 1rem;
+		border: 1px solid rgba(0, 0, 0, 0.06);
+		border-radius: 0.85rem;
+		background: rgba(255, 255, 255, 0.38);
+	}
+	:global(:root.dark) .comment-item {
+		border-color: rgba(255, 255, 255, 0.08);
+		background: rgba(255, 255, 255, 0.045);
+	}
+	.comment-author {
+		min-width: 0;
+		font-weight: 700;
+		color: rgba(0, 0, 0, 0.84);
+		overflow-wrap: anywhere;
+	}
+	a.comment-author {
+		color: var(--primary);
+	}
+	:global(:root.dark) .comment-author {
+		color: rgba(255, 255, 255, 0.86);
+	}
+	.comment-content {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		line-height: 1.75;
+		color: rgba(0, 0, 0, 0.78);
+	}
+	:global(:root.dark) .comment-content {
+		color: rgba(255, 255, 255, 0.78);
+	}
+	.comment-actions button {
+		color: rgba(0, 0, 0, 0.36);
+		font-size: 0.875rem;
+	}
+	:global(:root.dark) .comment-actions button {
+		color: rgba(255, 255, 255, 0.34);
+	}
+	.comment-form {
+		display: grid;
+		gap: 0.95rem;
+		margin-top: 1.25rem;
+	}
+	.comment-form-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.8rem;
+	}
+	.comment-form label {
+		display: grid;
+		gap: 0.42rem;
+		color: rgba(0, 0, 0, 0.72);
+		font-size: 0.875rem;
+	}
+	:global(:root.dark) .comment-form label {
+		color: rgba(255, 255, 255, 0.72);
+	}
+	.comment-form input,
+	.comment-form textarea {
+		width: 100%;
+		border: 1px solid rgba(0, 0, 0, 0.1);
+		border-radius: 0.75rem;
+		background: rgba(255, 255, 255, 0.58);
+		padding: 0.72rem 0.85rem;
+		color: rgba(0, 0, 0, 0.84);
+		outline: none;
+	}
+	.comment-form textarea {
+		min-height: 8rem;
+		resize: vertical;
+	}
+	.comment-form input:focus,
+	.comment-form textarea:focus {
+		border-color: color-mix(in oklab, var(--primary) 55%, transparent);
+		box-shadow: 0 0 0 3px
+			color-mix(in oklab, var(--primary) 18%, transparent);
+	}
+	:global(:root.dark) .comment-form input,
+	:global(:root.dark) .comment-form textarea {
+		border-color: rgba(255, 255, 255, 0.12);
+		background: rgba(255, 255, 255, 0.055);
+		color: rgba(255, 255, 255, 0.88);
+	}
+	.comment-turnstile {
+		min-height: 4rem;
+	}
+	.comment-form-footer {
+		align-items: flex-start;
+	}
+	.comment-feedback {
+		min-height: 1.25rem;
+		padding-top: 0.55rem;
+	}
+	.comment-form button[type="submit"] {
+		flex: 0 0 auto;
+		border-radius: 0.8rem;
+		background: var(--primary);
+		padding: 0.72rem 1rem;
+		color: white;
+		font-weight: 700;
+	}
+	.comment-form button[type="submit"]:disabled {
+		cursor: not-allowed;
+		opacity: 0.62;
+	}
+	@media (max-width: 768px) {
+		.comment-form-grid {
+			grid-template-columns: 1fr;
+		}
+		.comment-meta,
+		.comment-form-footer {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+		.comment-form button[type="submit"] {
+			width: 100%;
+		}
+	}
+</style>

@@ -1,7 +1,7 @@
 ---
 import path from "node:path";
 
-import Comment from "@components/comment/index.astro";
+import CommentBox from "@components/comments/CommentBox.astro";
 import {
 	LastModified,
 	PostMeta,
@@ -215,17 +215,15 @@ const lightboxImageMap = Object.fromEntries(
 
 function getMarkdownLocalImageSources(entry: CollectionEntry<"posts">) {
 	const imagePattern = /!\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^)]*["'])?\)/g;
-	const sources = Array.from((entry.body ?? "").matchAll(imagePattern), (match) =>
-		match[1].trim(),
+	const sources = Array.from(
+		(entry.body ?? "").matchAll(imagePattern),
+		(match) => match[1].trim(),
 	).filter((src) => isLocalImageSource(src));
 
 	return [...new Set(sources)];
 }
 
-async function resolveLocalImage(
-	entry: CollectionEntry<"posts">,
-	src: string,
-) {
+async function resolveLocalImage(entry: CollectionEntry<"posts">, src: string) {
 	const files = import.meta.glob<ImageMetadata>("../../**", {
 		import: "default",
 	});
@@ -412,7 +410,7 @@ function isLocalImageSource(src: string) {
 	</div>
 
 	<!-- 评论 -->
-	<Comment post={entry} />
+	<CommentBox />
 
 	{
 		siteConfig.showLastModified && (

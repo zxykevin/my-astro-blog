@@ -1,44 +1,80 @@
 name: Deploy to GitHub Pages Branch
 
 on:
-  # 每次推送到 `main` 分支时触发这个"工作流程"
-  # 如果你使用了别的分支名，请按需将 `main` 替换成你的分支名
-  # 允许你在 GitHub 上的 Actions 标签中手动触发此"工作流程"
+  push:
+    branches:
+      # 只在 main 分支更新时自动构建并部署正式站点
+      # 不要把 codex/xxx 这种测试分支加进来，避免测试代码直接覆盖线上 pages 分支
+      - main
+
+  # 允许在 GitHub Actions 页面手动触发部署
   workflow_dispatch:
 
-# 需要写入权限来推送到pages分支
+# 需要写入权限，因为构建完成后要把 dist 推送到 pages 分支
 permissions:
   contents: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
+      # 拉取当前仓库代码
       - name: Checkout your repository using git
         uses: actions/checkout@v4
         with:
-          submodules: true  # 支持 Git Submodule 模式
-          token: ${{ secrets.GITHUB_TOKEN }}  # 自动访问同账号下的私有仓库
-      
+          # 支持 Git Submodule 模式
+          # 如果主题或部分资源来自子模块，这里必须保留 true
+          submodules: true
+
+          # 使用 GitHub 自动生成的 token
+          # 用于读取仓库内容，并配合后面的部署步骤写入 pages 分支
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 配置 Node.js 环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
+          # 和本地开发环境保持一致，避免构建结果不同
           node-version: '22'
-          
+
+      # 配置 pnpm
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
+          # 这里只安装 pnpm 本身，不自动安装依赖
+          # 依赖安装交给下一步 pnpm install 处理
           run_install: false
-          
+
+      # 安装项目依赖
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-      
+
+      # 构建 Astro 静态站点
       - name: Build site
         run: pnpm run build
-      
+        env:
+          # Cloudflare Turnstile 前端 Site Key
+          # 用于评论区人机验证，可以公开给浏览器
+          # 在 GitHub: Settings → Secrets and variables → Actions → Variables 中配置
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+
+          # 评论系统后端 API 地址
+          # 当前指向 Cloudflare Worker 自定义域名：https://comments.yuulog.org
+          # 在 GitHub: Settings → Secrets and variables → Actions → Variables 中配置
+          PUBLIC_COMMENTS_API_BASE_URL: ${{ vars.PUBLIC_COMMENTS_API_BASE_URL }}
+
+      # 将 Astro 构建结果部署到 pages 分支
       - name: Deploy to pages branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: pages # 部署到pages分支
-          folder: dist # Astro默认构建输出目录
-          clean: true # 清理目标分支中的旧文件
+          # 部署目标分支
+          # Cloudflare Pages / GitHub Pages 会读取这个分支的静态文件
+          branch: pages
+
+          # Astro 默认构建输出目录
+          folder: dist
+
+          # 每次部署前清理 pages 分支中的旧文件
+          # 避免旧资源残留导致缓存或路径问题
+          clean: true
