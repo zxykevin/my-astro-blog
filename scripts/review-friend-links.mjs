@@ -52,6 +52,30 @@ function run(command, args, options = {}) {
 	return String(output).trim();
 }
 
+function isNetworkBlocked(error) {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	// Node's fetch often throws a TypeError("fetch failed") with a nested cause.
+	const cause = error.cause;
+	if (
+		error.name === "TypeError" &&
+		typeof error.message === "string" &&
+		error.message.toLowerCase().includes("fetch failed")
+	) {
+		if (cause && typeof cause === "object" && "code" in cause) {
+			return cause.code === "EACCES";
+		}
+	}
+
+	if (cause && typeof cause === "object" && "code" in cause) {
+		return cause.code === "EACCES";
+	}
+
+	return false;
+}
+
 async function githubRequest(pathname, options = {}) {
 	const response = await fetch(`https://api.github.com${pathname}`, {
 		...options,
@@ -144,6 +168,13 @@ async function assertReachable(url, label) {
 				`${label} ${text("\u8fd4\u56de HTTP")} ${response.status}`,
 			);
 		}
+	} catch (error) {
+		if (isNetworkBlocked(error)) {
+			throw new Error(
+				`${label} ${text("\u7f51\u7edc\u88ab\u73af\u5883\u7981\u6b62\uff08EACCES\uff09\uff0c\u65e0\u6cd5\u9a8c\u8bc1\u53ef\u8bbf\u95ee\u6027")}`,
+			);
+		}
+		throw error;
 	} finally {
 		clearTimeout(timeout);
 	}
@@ -306,7 +337,18 @@ async function main() {
 		);
 	}
 
-	const issues = await listFriendIssues();
+	let issues;
+	try {
+		issues = await listFriendIssues();
+	} catch (error) {
+		if (isNetworkBlocked(error)) {
+			console.warn(
+				"Network access blocked (EACCES). Skip friend-link review; cannot reach GitHub API.",
+			);
+			return;
+		}
+		throw error;
+	}
 	if (issues.length === 0) {
 		console.log("No friend-link issues to review.");
 		return;
