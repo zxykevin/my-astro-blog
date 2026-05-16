@@ -6,26 +6,32 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 ---
 
 <section
-	class="comment-box card-base-transparent mb-4 p-4 md:p-6"
+	class="comment-section mb-4"
 	data-comment-box
 	data-api-base-url={API_BASE_URL}
 	data-turnstile-site-key={TURNSTILE_SITE_KEY}
 	aria-label="评论区"
 >
-	<div class="comment-box-header">
+	<div class="comment-section-header">
 		<h2>评论</h2>
 		<span data-comment-count aria-live="polite"></span>
 	</div>
 
 	<div class="comment-list" data-comment-list aria-live="polite">
-		<p class="comment-state">评论加载中...</p>
+		<div class="comment-state-card">
+			<p class="comment-state-text">评论加载中...</p>
+		</div>
 	</div>
 
-	<form class="comment-form" data-comment-form novalidate>
+	<form class="comment-form-card" data-comment-form novalidate>
+		<div class="comment-form-heading">
+			<h3 data-form-title>发表评论</h3>
+			<button type="button" data-cancel-reply hidden>取消回复</button>
+		</div>
 		<div class="comment-form-grid">
 			<label>
 				<span>昵称</span>
-				<input name="nickname" type="text" required maxlength="80" />
+				<input name="nickname" type="text" required maxlength="30" />
 			</label>
 			<label>
 				<span>邮箱</span>
@@ -44,7 +50,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 		<label>
 			<span>评论内容</span>
-			<textarea name="content" required rows="5" maxlength="2000"
+			<textarea name="content" required rows="5" maxlength="1000"
 			></textarea>
 		</label>
 
@@ -93,6 +99,10 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 		};
 		__turnstileToken?: string;
 		__turnstileWidgetId?: string;
+		__replyTarget?: {
+			id: string;
+			nickname: string;
+		} | null;
 	};
 
 	type TurnstileApi = {
@@ -146,6 +156,10 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 			list: root.querySelector<HTMLElement>("[data-comment-list]"),
 			count: root.querySelector<HTMLElement>("[data-comment-count]"),
 			form: root.querySelector<HTMLFormElement>("[data-comment-form]"),
+			formTitle: root.querySelector<HTMLElement>("[data-form-title]"),
+			cancelReplyButton: root.querySelector<HTMLButtonElement>(
+				"[data-cancel-reply]",
+			),
 			feedback: root.querySelector<HTMLElement>(
 				"[data-comment-feedback]",
 			),
@@ -207,10 +221,15 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 	function renderState(container: HTMLElement, message: string) {
 		container.replaceChildren();
-		const state = document.createElement("p");
-		state.className = "comment-state";
-		state.textContent = message;
-		container.append(state);
+		const stateCard = document.createElement("div");
+		stateCard.className = "comment-state-card";
+
+		const stateText = document.createElement("p");
+		stateText.className = "comment-state-text";
+		stateText.textContent = message;
+
+		stateCard.append(stateText);
+		container.append(stateCard);
 	}
 
 	function renderComments(root: CommentBoxElement, comments: Comment[]) {
@@ -227,48 +246,79 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 			return;
 		}
 
+		const topLevelComments = comments.filter((comment) => !comment.parentId);
+		const repliesByParentId = new Map<string, Comment[]>();
 		for (const comment of comments) {
-			const article = document.createElement("article");
-			article.className = "comment-item";
-			article.dataset.commentId = comment.id;
-			article.dataset.parentId = comment.parentId ?? "";
+			if (!comment.parentId) continue;
+			const replies = repliesByParentId.get(comment.parentId) ?? [];
+			replies.push(comment);
+			repliesByParentId.set(comment.parentId, replies);
+		}
 
-			const meta = document.createElement("div");
-			meta.className = "comment-meta";
-
-			const safeWebsite = getSafeWebsite(comment.website);
-			const author = safeWebsite
-				? document.createElement("a")
-				: document.createElement("span");
-			author.className = "comment-author";
-			author.textContent = comment.nickname;
-			if (author instanceof HTMLAnchorElement && safeWebsite) {
-				author.href = safeWebsite;
-				author.target = "_blank";
-				author.rel = "nofollow noopener noreferrer";
+		for (const comment of topLevelComments) {
+			const article = createCommentArticle(root, comment, true);
+			const replies = article.querySelector<HTMLElement>(".comment-replies");
+			for (const reply of repliesByParentId.get(comment.id) ?? []) {
+				replies?.append(createCommentArticle(root, reply, false));
 			}
-
-			const time = document.createElement("time");
-			time.dateTime = comment.createdAt;
-			time.textContent = formatLocalTime(comment.createdAt);
-			meta.append(author, time);
-
-			const content = document.createElement("p");
-			content.className = "comment-content";
-			content.textContent = comment.content;
-
-			const actions = document.createElement("div");
-			actions.className = "comment-actions";
-			const replyButton = document.createElement("button");
-			replyButton.type = "button";
-			replyButton.disabled = true;
-			replyButton.textContent = "回复";
-			replyButton.title = "回复功能稍后开放";
-			actions.append(replyButton);
-
-			article.append(meta, content, actions);
 			list.append(article);
 		}
+	}
+
+	function createCommentArticle(
+		root: CommentBoxElement,
+		comment: Comment,
+		canReply: boolean,
+	) {
+		const article = document.createElement("article");
+		article.className = "comment-thread-card";
+		article.dataset.commentId = comment.id;
+		article.dataset.parentId = comment.parentId ?? "";
+
+		const meta = document.createElement("div");
+		meta.className = "comment-meta";
+
+		const safeWebsite = getSafeWebsite(comment.website);
+		const author = safeWebsite
+			? document.createElement("a")
+			: document.createElement("span");
+		author.className = "comment-author";
+		author.textContent = comment.nickname;
+		if (author instanceof HTMLAnchorElement && safeWebsite) {
+			author.href = safeWebsite;
+			author.target = "_blank";
+			author.rel = "nofollow noopener noreferrer";
+		}
+
+		const time = document.createElement("time");
+		time.dateTime = comment.createdAt;
+		time.textContent = formatLocalTime(comment.createdAt);
+		meta.append(author, time);
+
+		const content = document.createElement("p");
+		content.className = "comment-content";
+		content.textContent = comment.content;
+
+		const actions = document.createElement("div");
+		actions.className = "comment-actions";
+		if (canReply) {
+			const replyButton = document.createElement("button");
+			replyButton.type = "button";
+			replyButton.textContent = "回复";
+			replyButton.addEventListener("click", () => {
+				setReplyTarget(root, {
+					id: comment.id,
+					nickname: comment.nickname,
+				});
+			});
+			actions.append(replyButton);
+		}
+
+		const replies = document.createElement("div");
+		replies.className = "comment-replies";
+
+		article.append(meta, content, actions, replies);
+		return article;
 	}
 
 	async function loadComments(root: CommentBoxElement) {
@@ -341,8 +391,13 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 	}
 
 	function setupForm(root: CommentBoxElement) {
-		const { form, feedback, submitButton } = getElements(root);
+		const { form, feedback, submitButton, cancelReplyButton } =
+			getElements(root);
 		if (!form || !feedback || !submitButton) return;
+
+		cancelReplyButton?.addEventListener("click", () => {
+			setReplyTarget(root, null);
+		});
 
 		form.addEventListener("submit", async (event) => {
 			event.preventDefault();
@@ -382,7 +437,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 						},
 						body: JSON.stringify({
 							pagePath: window.location.pathname,
-							parentId: null,
+							parentId: root.__replyTarget?.id ?? null,
 							nickname,
 							email,
 							website,
@@ -403,6 +458,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 				if (contentField instanceof HTMLTextAreaElement) {
 					contentField.value = "";
 				}
+				setReplyTarget(root, null);
 			} catch {
 				feedback.textContent = "提交失败，请检查网络后重试。";
 			} finally {
@@ -411,6 +467,25 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 				submitButton.textContent = "提交评论";
 			}
 		});
+	}
+
+	function setReplyTarget(
+		root: CommentBoxElement,
+		target: CommentBoxElement["__replyTarget"],
+	) {
+		const { formTitle, cancelReplyButton, form } = getElements(root);
+		root.__replyTarget = target;
+		if (formTitle) {
+			formTitle.textContent = target
+				? `回复 @${target.nickname}`
+				: "发表评论";
+		}
+		if (cancelReplyButton) {
+			cancelReplyButton.hidden = !target;
+		}
+		if (target) {
+			form?.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
 	}
 
 	function initCommentBoxes() {
@@ -440,8 +515,42 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 </script>
 
 <style>
-	.comment-box {
+	.comment-section {
+		display: grid;
+		gap: 1rem;
+	}
+	.comment-section-header,
+	:global(.comment-meta),
+	.comment-form-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+	.comment-section-header {
+		padding: 0 0.15rem;
+	}
+	.comment-section-header h2 {
+		font-size: 1.2rem;
+		font-weight: 700;
+		color: rgba(0, 0, 0, 0.9);
+	}
+	.comment-section-header span,
+	:global(.comment-state-text),
+	:global(.comment-meta time),
+	.comment-feedback {
+		color: rgba(0, 0, 0, 0.52);
+		font-size: 0.875rem;
+	}
+	.comment-list {
+		display: grid;
+		gap: 0.9rem;
+	}
+	:global(.comment-thread-card),
+	.comment-form-card,
+	:global(.comment-state-card) {
 		border: 1px solid color-mix(in oklab, var(--primary) 16%, transparent);
+		border-radius: 0.85rem;
 		background:
 			linear-gradient(
 				135deg,
@@ -453,113 +562,70 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 			0 12px 30px rgba(0, 0, 0, 0.06),
 			inset 0 1px 0 rgba(255, 255, 255, 0.24);
 	}
-	:global(:root.dark) .comment-box {
-		background:
-			linear-gradient(
-				135deg,
-				rgba(255, 255, 255, 0.1),
-				rgba(255, 255, 255, 0.035)
-			),
-			color-mix(in oklab, var(--card-bg-transparent) 92%, transparent);
-		box-shadow:
-			0 16px 36px rgba(0, 0, 0, 0.24),
-			inset 0 1px 0 rgba(255, 255, 255, 0.08);
-	}
-	.comment-box-header,
-	.comment-meta,
-	.comment-form-footer {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-	}
-	.comment-box-header h2 {
-		font-size: 1.2rem;
-		font-weight: 700;
-		color: rgba(0, 0, 0, 0.9);
-	}
-	:global(:root.dark) .comment-box-header h2 {
-		color: rgba(255, 255, 255, 0.92);
-	}
-	.comment-box-header span,
-	.comment-state,
-	.comment-meta time,
-	.comment-feedback {
-		color: rgba(0, 0, 0, 0.52);
-		font-size: 0.875rem;
-	}
-	:global(:root.dark) .comment-box-header span,
-	:global(:root.dark) .comment-state,
-	:global(:root.dark) .comment-meta time,
-	:global(:root.dark) .comment-feedback {
-		color: rgba(255, 255, 255, 0.54);
-	}
-	.comment-list {
-		display: grid;
-		gap: 0.9rem;
-		margin-top: 1rem;
-	}
-	.comment-item {
+	:global(.comment-thread-card) {
 		display: grid;
 		gap: 0.65rem;
 		padding: 1rem;
-		border: 1px solid rgba(0, 0, 0, 0.06);
-		border-radius: 0.85rem;
-		background: rgba(255, 255, 255, 0.38);
 	}
-	:global(:root.dark) .comment-item {
-		border-color: rgba(255, 255, 255, 0.08);
-		background: rgba(255, 255, 255, 0.045);
-	}
-	.comment-author {
+	:global(.comment-author) {
 		min-width: 0;
 		font-weight: 700;
 		color: rgba(0, 0, 0, 0.84);
 		overflow-wrap: anywhere;
 	}
-	a.comment-author {
+	:global(a.comment-author) {
 		color: var(--primary);
 	}
-	:global(:root.dark) .comment-author {
-		color: rgba(255, 255, 255, 0.86);
-	}
-	.comment-content {
+	:global(.comment-content) {
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
 		line-height: 1.75;
 		color: rgba(0, 0, 0, 0.78);
 	}
-	:global(:root.dark) .comment-content {
-		color: rgba(255, 255, 255, 0.78);
-	}
-	.comment-actions button {
-		color: rgba(0, 0, 0, 0.36);
+	:global(.comment-actions button) {
+		color: rgba(0, 0, 0, 0.56);
 		font-size: 0.875rem;
 	}
-	:global(:root.dark) .comment-actions button {
-		color: rgba(255, 255, 255, 0.34);
+	:global(.comment-replies) {
+		display: grid;
+		gap: 0.75rem;
+		margin-left: 1rem;
+		padding-left: 1rem;
+		border-left: 1px solid
+			color-mix(in oklab, var(--primary) 16%, transparent);
 	}
-	.comment-form {
+	:global(.comment-replies:empty) {
+		display: none;
+	}
+	.comment-form-card {
 		display: grid;
 		gap: 0.95rem;
-		margin-top: 1.25rem;
+		padding: 1rem;
+	}
+	.comment-form-heading {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+	.comment-form-card h3 {
+		font-size: 1rem;
+		font-weight: 700;
+		color: rgba(0, 0, 0, 0.88);
 	}
 	.comment-form-grid {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 0.8rem;
 	}
-	.comment-form label {
+	.comment-form-card label {
 		display: grid;
 		gap: 0.42rem;
 		color: rgba(0, 0, 0, 0.72);
 		font-size: 0.875rem;
 	}
-	:global(:root.dark) .comment-form label {
-		color: rgba(255, 255, 255, 0.72);
-	}
-	.comment-form input,
-	.comment-form textarea {
+	.comment-form-card input,
+	.comment-form-card textarea {
 		width: 100%;
 		border: 1px solid rgba(0, 0, 0, 0.1);
 		border-radius: 0.75rem;
@@ -568,21 +634,19 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 		color: rgba(0, 0, 0, 0.84);
 		outline: none;
 	}
-	.comment-form textarea {
+	.comment-form-card input::placeholder,
+	.comment-form-card textarea::placeholder {
+		color: rgba(0, 0, 0, 0.38);
+	}
+	.comment-form-card textarea {
 		min-height: 8rem;
 		resize: vertical;
 	}
-	.comment-form input:focus,
-	.comment-form textarea:focus {
+	.comment-form-card input:focus,
+	.comment-form-card textarea:focus {
 		border-color: color-mix(in oklab, var(--primary) 55%, transparent);
 		box-shadow: 0 0 0 3px
 			color-mix(in oklab, var(--primary) 18%, transparent);
-	}
-	:global(:root.dark) .comment-form input,
-	:global(:root.dark) .comment-form textarea {
-		border-color: rgba(255, 255, 255, 0.12);
-		background: rgba(255, 255, 255, 0.055);
-		color: rgba(255, 255, 255, 0.88);
 	}
 	.comment-turnstile {
 		min-height: 4rem;
@@ -594,7 +658,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 		min-height: 1.25rem;
 		padding-top: 0.55rem;
 	}
-	.comment-form button[type="submit"] {
+	.comment-form-card button[type="submit"] {
 		flex: 0 0 auto;
 		border-radius: 0.8rem;
 		background: var(--primary);
@@ -602,20 +666,87 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 		color: white;
 		font-weight: 700;
 	}
-	.comment-form button[type="submit"]:disabled {
+	.comment-form-card button[type="submit"]:disabled {
 		cursor: not-allowed;
 		opacity: 0.62;
+	}
+	.comment-form-heading button {
+		color: rgba(0, 0, 0, 0.56);
+		font-size: 0.875rem;
+	}
+	:global(.comment-state-card) {
+		padding: 1rem;
+	}
+	:global(.comment-state-text) {
+		margin: 0;
+		color: rgba(0, 0, 0, 0.78);
+		line-height: 1.7;
+	}
+	:global(:root.dark) .comment-section-header h2,
+	:global(:root.dark) .comment-form-card h3 {
+		color: rgba(255, 255, 255, 0.94);
+	}
+	:global(:root.dark) .comment-section-header span,
+	:global(:root.dark .comment-meta time),
+	:global(:root.dark) .comment-feedback {
+		color: rgba(255, 255, 255, 0.58);
+	}
+	:global(:root.dark .comment-thread-card),
+	:global(:root.dark) .comment-form-card,
+	:global(:root.dark .comment-state-card) {
+		border-color: rgba(255, 255, 255, 0.08);
+		background:
+			linear-gradient(
+				135deg,
+				rgba(255, 255, 255, 0.08),
+				rgba(255, 255, 255, 0.035)
+			),
+			color-mix(in oklab, var(--card-bg-transparent) 92%, transparent);
+		box-shadow:
+			0 16px 36px rgba(0, 0, 0, 0.24),
+			inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	}
+	:global(:root.dark .comment-author) {
+		color: rgba(255, 255, 255, 0.92);
+	}
+	:global(:root.dark .comment-content) {
+		color: rgba(255, 255, 255, 0.82);
+	}
+	:global(:root.dark .comment-state-text) {
+		color: rgba(255, 255, 255, 0.82);
+	}
+	:global(:root.dark .comment-actions button) {
+		color: rgba(255, 255, 255, 0.58);
+	}
+	:global(:root.dark) .comment-form-heading button {
+		color: rgba(255, 255, 255, 0.58);
+	}
+	:global(:root.dark) .comment-form-card label {
+		color: rgba(255, 255, 255, 0.82);
+	}
+	:global(:root.dark) .comment-form-card input,
+	:global(:root.dark) .comment-form-card textarea {
+		border-color: rgba(255, 255, 255, 0.12);
+		background: rgba(255, 255, 255, 0.06);
+		color: rgba(255, 255, 255, 0.88);
+	}
+	:global(:root.dark) .comment-form-card input::placeholder,
+	:global(:root.dark) .comment-form-card textarea::placeholder {
+		color: rgba(255, 255, 255, 0.38);
+	}
+	:global(:root.dark) .comment-form-card button[type="submit"]:disabled {
+		opacity: 0.68;
 	}
 	@media (max-width: 768px) {
 		.comment-form-grid {
 			grid-template-columns: 1fr;
 		}
-		.comment-meta,
+		:global(.comment-meta),
 		.comment-form-footer {
 			align-items: flex-start;
 			flex-direction: column;
 		}
-		.comment-form button[type="submit"] {
+		.comment-form-card button[type="submit"] {
 			width: 100%;
 		}
 	}
