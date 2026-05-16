@@ -50,6 +50,10 @@ html {
   scrollbar-gutter: stable;
 }
 
+body {
+  background-color: var(--page-bg);
+}
+
 /* 页面顶部渐变高光效果 */
 .top-gradient-highlight {
   position: fixed;

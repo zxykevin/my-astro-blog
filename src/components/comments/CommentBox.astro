@@ -246,6 +246,9 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 			return;
 		}
 
+		const commentsById = new Map(
+			comments.map((comment) => [comment.id, comment]),
+		);
 		const topLevelComments = comments.filter((comment) => !comment.parentId);
 		const repliesByParentId = new Map<string, Comment[]>();
 		for (const comment of comments) {
@@ -256,19 +259,45 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 		}
 
 		for (const comment of topLevelComments) {
-			const article = createCommentArticle(root, comment, true);
+			const article = createCommentArticle(
+				root,
+				comment,
+				commentsById,
+			);
 			const replies = article.querySelector<HTMLElement>(".comment-replies");
-			for (const reply of repliesByParentId.get(comment.id) ?? []) {
-				replies?.append(createCommentArticle(root, reply, false));
-			}
+			appendReplies(root, comment.id, replies, repliesByParentId, commentsById);
 			list.append(article);
+		}
+	}
+
+	function appendReplies(
+		root: CommentBoxElement,
+		parentId: string,
+		container: HTMLElement | null,
+		repliesByParentId: Map<string, Comment[]>,
+		commentsById: Map<string, Comment>,
+	) {
+		if (!container) return;
+
+		for (const reply of repliesByParentId.get(parentId) ?? []) {
+			const article = createCommentArticle(root, reply, commentsById);
+			const nestedReplies =
+				article.querySelector<HTMLElement>(".comment-replies");
+			appendReplies(
+				root,
+				reply.id,
+				nestedReplies,
+				repliesByParentId,
+				commentsById,
+			);
+			container.append(article);
 		}
 	}
 
 	function createCommentArticle(
 		root: CommentBoxElement,
 		comment: Comment,
-		canReply: boolean,
+		commentsById: Map<string, Comment>,
 	) {
 		const article = document.createElement("article");
 		article.className = "comment-thread-card";
@@ -282,8 +311,13 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 		const author = safeWebsite
 			? document.createElement("a")
 			: document.createElement("span");
+		const parentComment = comment.parentId
+			? commentsById.get(comment.parentId)
+			: null;
 		author.className = "comment-author";
-		author.textContent = comment.nickname;
+		author.textContent = parentComment
+			? `回复 @${parentComment.nickname}`
+			: comment.nickname;
 		if (author instanceof HTMLAnchorElement && safeWebsite) {
 			author.href = safeWebsite;
 			author.target = "_blank";
@@ -301,18 +335,17 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 		const actions = document.createElement("div");
 		actions.className = "comment-actions";
-		if (canReply) {
-			const replyButton = document.createElement("button");
-			replyButton.type = "button";
-			replyButton.textContent = "回复";
-			replyButton.addEventListener("click", () => {
-				setReplyTarget(root, {
-					id: comment.id,
-					nickname: comment.nickname,
-				});
+		const replyButton = document.createElement("button");
+		replyButton.type = "button";
+		replyButton.className = "comment-reply-button";
+		replyButton.textContent = "回复";
+		replyButton.addEventListener("click", () => {
+			setReplyTarget(root, {
+				id: comment.id,
+				nickname: comment.nickname,
 			});
-			actions.append(replyButton);
-		}
+		});
+		actions.append(replyButton);
 
 		const replies = document.createElement("div");
 		replies.className = "comment-replies";
@@ -582,9 +615,24 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 		line-height: 1.75;
 		color: rgba(0, 0, 0, 0.78);
 	}
-	:global(.comment-actions button) {
-		color: rgba(0, 0, 0, 0.56);
+	:global(.comment-reply-button) {
+		border: 1px solid color-mix(in oklab, var(--primary) 38%, transparent);
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--primary) 12%, white);
+		padding: 0.28rem 0.72rem;
+		color: color-mix(in oklab, var(--primary) 72%, black);
 		font-size: 0.875rem;
+		font-weight: 700;
+		transition:
+			background 0.18s ease,
+			border-color 0.18s ease,
+			color 0.18s ease,
+			transform 0.18s ease;
+	}
+	:global(.comment-reply-button:hover) {
+		border-color: color-mix(in oklab, var(--primary) 58%, transparent);
+		background: color-mix(in oklab, var(--primary) 20%, white);
+		transform: translateY(-1px);
 	}
 	:global(.comment-replies) {
 		display: grid;
@@ -715,8 +763,14 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
 	:global(:root.dark .comment-state-text) {
 		color: rgba(255, 255, 255, 0.82);
 	}
-	:global(:root.dark .comment-actions button) {
-		color: rgba(255, 255, 255, 0.58);
+	:global(:root.dark .comment-reply-button) {
+		border-color: color-mix(in oklab, var(--primary) 52%, transparent);
+		background: color-mix(in oklab, var(--primary) 22%, transparent);
+		color: color-mix(in oklab, var(--primary) 28%, white);
+	}
+	:global(:root.dark .comment-reply-button:hover) {
+		border-color: color-mix(in oklab, var(--primary) 72%, transparent);
+		background: color-mix(in oklab, var(--primary) 34%, transparent);
 	}
 	:global(:root.dark) .comment-form-heading button {
 		color: rgba(255, 255, 255, 0.58);
