@@ -4,6 +4,7 @@ published: 2026-05-13
 description: 复盘一次从德国出发、经中国转机入境大阪，再一路经过奈良、京都、宇治、丰乡、沼津和东京的日本自由行与动漫巡礼路线。
 tags: [日本旅行, 动漫巡礼, 关西旅行, 沼津, 东京]
 category: 旅行记录
+pinned: true
 draft: false
 lang: zh-CN
 ---
