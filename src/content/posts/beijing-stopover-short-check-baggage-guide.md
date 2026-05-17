@@ -4,7 +4,7 @@ published: 2026-05-13
 description: 复盘一次东京羽田经北京回法兰克福时，在北京中断行李直挂、入境取行李、采购补给、增加第二件托运行李再回德国的完整流程。
 tags: [转机攻略, 行李直挂, 北京机场, 留学生, 国际航班]
 category: 旅行记录
-draft: false
+draft: true
 lang: zh-CN
 ---
 

@@ -4,7 +4,7 @@ published: 2026-05-13
 description: 以中国护照、德国居留卡、德国学生身份为例，复盘一次在德国申请日本旅游签证的材料准备、行程表逻辑、单次与多次签证预期。
 tags: [日本旅行, 日本签证, 德国留学, 中国护照, 旅行攻略]
 category: 旅行记录
-draft: false
+draft: true
 lang: zh-CN
 ---
 
