@@ -363,6 +363,10 @@
 				background: #475569;
 			}
 
+			.delete-action {
+				background: #7f1d1d;
+			}
+
 			.state-card {
 				color: var(--muted);
 			}
@@ -471,7 +475,7 @@
 		<script>
 			const API_BASE_URL = "https://comments.yuulog.org";
 			const STORAGE_KEY = "mizuki-admin-comments-token";
-			const STATUSES = ["approved", "pending", "spam", "deleted"];
+			const MUTABLE_STATUSES = ["approved", "pending", "spam"];
 			const FILTERS = [
 				{ value: "", label: "全部" },
 				{ value: "pending", label: "pending" },
@@ -597,16 +601,16 @@
 						const contact = comment.email || comment.emailHash || "未提供";
 						const website = comment.website || "未提供";
 						const busy = state.busyId === comment.id;
-						const actions = STATUSES.map((status) => {
+						const actions = MUTABLE_STATUSES.map((status) => {
 							const labels = {
 								approved: "通过",
 								pending: "待审核",
 								spam: "垃圾",
-								deleted: "删除",
 							};
 							const disabled = comment.status === status || busy ? " disabled" : "";
 							return `<button class="${status}" type="button" data-id="${escapeHtml(comment.id)}" data-status="${status}"${disabled}>${busy && comment.status !== status ? "处理中..." : labels[status]}</button>`;
 						}).join("");
+						const deleteAction = `<button class="delete-action" type="button" data-id="${escapeHtml(comment.id)}" data-action="delete"${busy ? " disabled" : ""}>${busy ? "处理中..." : "永久删除"}</button>`;
 
 						return `
 							<article class="comment-card${comment.parentId ? " reply" : ""}">
@@ -628,7 +632,7 @@
 								<p class="comment-body">${escapeHtml(comment.content)}</p>
 								<footer class="card-foot">
 									<p class="meta-line">${escapeHtml(replyText)}</p>
-									<div class="card-actions">${actions}</div>
+									<div class="card-actions">${actions}${deleteAction}</div>
 								</footer>
 							</article>
 						`;
@@ -674,7 +678,7 @@
 			}
 
 			async function updateStatus(id, status) {
-				if (!state.token || state.busyId || !STATUSES.includes(status)) {
+				if (!state.token || state.busyId || !MUTABLE_STATUSES.includes(status)) {
 					return;
 				}
 
@@ -707,6 +711,46 @@
 				} catch (error) {
 					state.comments[index] = { ...state.comments[index], status: previousStatus };
 					setFeedback(error instanceof Error ? error.message : "状态更新失败", "error");
+				} finally {
+					state.busyId = "";
+					renderComments();
+				}
+			}
+
+			async function deleteComment(id) {
+				if (!state.token || state.busyId) {
+					return;
+				}
+
+				if (!window.confirm("确定要永久删除这条评论吗？此操作不可恢复。")) {
+					return;
+				}
+
+				const index = state.comments.findIndex((comment) => comment.id === id);
+				if (index === -1) {
+					return;
+				}
+
+				state.busyId = id;
+				setFeedback("正在永久删除评论...");
+				renderComments();
+
+				try {
+					const response = await fetch(endpoint(`/api/admin/comments/${encodeURIComponent(id)}`), {
+						method: "DELETE",
+						headers: {
+							Accept: "application/json",
+							Authorization: `Bearer ${state.token}`,
+						},
+					});
+					const data = await response.json();
+					if (!response.ok || !data.ok) {
+						throw new Error(data.message || "评论删除失败");
+					}
+					state.comments = state.comments.filter((comment) => comment.id !== id);
+					setFeedback("评论已永久删除", "success");
+				} catch (error) {
+					setFeedback(error instanceof Error ? error.message : "评论删除失败", "error");
 				} finally {
 					state.busyId = "";
 					renderComments();
@@ -751,9 +795,15 @@
 			});
 
 			els.commentList.addEventListener("click", (event) => {
-				const button = event.target.closest("[data-id][data-status]");
+				const button = event.target.closest("[data-id]");
 				if (!button) return;
-				updateStatus(button.dataset.id, button.dataset.status);
+				if (button.dataset.action === "delete") {
+					deleteComment(button.dataset.id);
+					return;
+				}
+				if (button.dataset.status) {
+					updateStatus(button.dataset.id, button.dataset.status);
+				}
 			});
 
 			setTokenStatus();
